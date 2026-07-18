@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>R3U SpoolBox — APS516 to Excel</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --blue-900:#0A3158; --blue-800:#0C447C; --blue-700:#12539b; --blue-600:#185FA5;
+    --blue-500:#2b76c2; --blue-400:#378ADD; --blue-100:#dcebfa; --blue-50:#EAF3FC;
+    --ink:#1d2733; --ink-dim:#44515f; --ink-mute:#8a97a5;
+    --bg:#eef2f6; --panel:#ffffff; --panel-2:#f4f7fa;
+    --line:#e2e8f0; --line-hi:#c6d2de;
+    --red:#b3362e; --green:#1f7a43;
+    --mono:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace;
+    --sans:"Segoe UI",-apple-system,BlinkMacSystemFont,"Inter",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg);color:var(--ink);font-family:var(--sans);
+    font-size:14px;display:flex;flex-direction:column;overflow:hidden;
+  }
+  header{
+    display:flex;align-items:center;gap:14px;padding:10px 16px;flex-shrink:0;
+    background:linear-gradient(90deg,var(--blue-800),var(--blue-600));
+    color:#fff;box-shadow:0 1px 3px rgba(12,68,124,.25);
+  }
+  .brand{font-family:var(--mono);font-size:13px;letter-spacing:.14em;color:#cfe3f7}
+  .brand b{color:#fff;font-weight:600}
+  .sub{font-size:12px;color:#9dc2e8;font-family:var(--mono)}
+  .spacer{flex:1}
+  label.opt{
+    display:flex;align-items:center;gap:6px;font-size:12px;color:#cfe3f7;
+    cursor:pointer;user-select:none;white-space:nowrap;
+  }
+  label.opt input{accent-color:#fff}
+  button{
+    font-family:var(--sans);font-size:13px;cursor:pointer;border-radius:6px;
+    padding:6px 14px;transition:.12s;border:1px solid rgba(255,255,255,.45);
+    background:transparent;color:#fff;
+  }
+  button:hover:not(:disabled){background:rgba(255,255,255,.12)}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  button.go{background:#fff;border-color:#fff;color:var(--blue-800);font-weight:600}
+  button.go:hover:not(:disabled){background:var(--blue-50)}
+  main{flex:1;display:flex;min-height:0}
+  aside{
+    width:176px;flex-shrink:0;border-right:1px solid var(--line);
+    background:var(--panel);display:flex;flex-direction:column;
+  }
+  .aside-h{
+    padding:9px 12px;font-family:var(--mono);font-size:11px;letter-spacing:.1em;
+    color:var(--ink-mute);border-bottom:1px solid var(--line);
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  .files{flex:1;overflow-y:auto;padding:5px}
+  .f{
+    padding:7px 8px;border-radius:6px;cursor:pointer;margin-bottom:3px;
+    border:1px solid transparent;transition:.1s;
+  }
+  .f:hover{background:var(--panel-2)}
+  .f.on{background:var(--blue-50);border-color:var(--blue-100)}
+  .f-n{
+    font-family:var(--mono);font-size:11.5px;color:var(--ink-dim);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .f.on .f-n{color:var(--blue-800);font-weight:600}
+  .f-m{font-size:10.5px;color:var(--ink-mute);margin-top:2px;font-family:var(--mono)}
+  .f.on .f-m{color:var(--blue-600)}
+  .f-x{float:right;color:var(--ink-mute);padding:0 3px;font-size:13px;line-height:1.2}
+  .f-x:hover{color:var(--red)}
+  .pick-btns{padding:6px;display:flex;flex-direction:column;gap:5px;border-top:1px solid var(--line)}
+  .drop{
+    padding:11px 8px;border:1px dashed var(--line-hi);border-radius:6px;
+    text-align:center;color:var(--ink-mute);font-size:11.5px;cursor:pointer;transition:.12s;
+    background:var(--panel);
+  }
+  .drop:hover,.drop.over{border-color:var(--blue-500);color:var(--blue-700);background:var(--blue-50)}
+  section{flex:1;display:flex;flex-direction:column;min-width:0}
+  .bar{
+    padding:8px 14px;border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:10px;background:var(--panel);flex-shrink:0;
+  }
+  .title{font-size:13px;font-weight:600;color:var(--blue-900);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .meta{font-size:11px;color:var(--ink-mute);font-family:var(--mono);margin-top:1px}
+  .tag{
+    font-family:var(--mono);font-size:10px;letter-spacing:.06em;padding:3px 8px;
+    border-radius:4px;border:1px solid;white-space:nowrap;
+  }
+  .tag.ok{color:var(--green);border-color:#b7dcc5;background:#eaf6ee}
+  .tag.bad{color:var(--red);border-color:#e7c2bf;background:#fbeeed}
+  .tag.n{color:var(--blue-700);border-color:var(--blue-100);background:var(--blue-50)}
+  .split{flex:1;display:flex;min-height:0}
+  .prev{
+    width:40%;flex-shrink:0;border-right:1px solid var(--line);
+    display:flex;flex-direction:column;background:var(--panel);min-width:0;
+  }
+  .pane-h{
+    padding:6px 12px;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;
+    color:var(--ink-mute);border-bottom:1px solid var(--line);background:var(--panel-2);
+    flex-shrink:0;display:flex;justify-content:space-between;
+  }
+  .prev-body{
+    flex:1;overflow:auto;font-family:var(--mono);font-size:11px;line-height:1.55;
+    color:var(--ink-dim);padding:6px 0;white-space:pre;
+  }
+  .ln{padding:0 10px 0 8px;display:block}
+  .ln .no{display:inline-block;width:34px;color:#b9c6d4;text-align:right;margin-right:10px;user-select:none}
+  .ln.hl{background:var(--blue-50);color:var(--blue-900)}
+  .ln.hl .no{color:var(--blue-500)}
+  .tbl{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--panel)}
+  .tbl-scroll{flex:1;overflow:auto;min-height:0}
+  table{border-collapse:collapse;width:100%;font-family:var(--mono);font-size:12px}
+  thead th{
+    position:sticky;top:0;background:var(--blue-800);color:#fff;
+    font-weight:500;text-align:right;padding:7px 9px;white-space:nowrap;
+    font-size:11px;z-index:2;
+  }
+  thead th:nth-child(1),thead th:nth-child(2),thead th:nth-child(3){text-align:left}
+  tbody td{
+    padding:5px 9px;border-bottom:1px solid var(--line);text-align:right;
+    white-space:nowrap;color:var(--ink-dim);
+  }
+  tbody td:nth-child(1),tbody td:nth-child(2){text-align:left;color:var(--ink);font-weight:600}
+  tbody td:nth-child(3){text-align:left;color:var(--blue-700)}
+  tbody tr{cursor:pointer}
+  tbody tr:nth-child(even) td{background:#f8fafc}
+  tbody tr:hover td{background:var(--blue-50)}
+  tbody tr.sel td{background:var(--blue-100)}
+  td.neg{color:var(--red);font-weight:600}
+  td.zero{color:#b0bbc7}
+  .tot-h{
+    padding:6px 12px;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;
+    color:var(--ink-mute);border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+    background:var(--panel-2);flex-shrink:0;
+  }
+  .tot-wrap{flex-shrink:0;overflow-x:auto}
+  .tot-wrap thead th{background:var(--blue-700)}
+  .tot-wrap tbody td{background:var(--blue-50);font-weight:600;color:var(--blue-900)}
+  .tot-wrap tbody td.neg{color:var(--red)}
+  .empty{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    color:var(--ink-mute);gap:8px;text-align:center;padding:40px;
+  }
+  .empty .k{font-family:var(--mono);font-size:12px;color:var(--ink-dim)}
+  .rec{
+    border-top:1px solid var(--line);background:var(--panel-2);padding:7px 14px;
+    font-family:var(--mono);font-size:11px;color:var(--ink-mute);
+    display:flex;gap:14px;flex-wrap:wrap;align-items:center;flex-shrink:0;
+  }
+  .rec b{color:var(--green);font-weight:600}
+  .rec b.x{color:var(--red)}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-track{background:var(--bg)}
+  ::-webkit-scrollbar-thumb{background:var(--line-hi);border-radius:5px}
+  ::-webkit-scrollbar-thumb:hover{background:var(--ink-mute)}
+</style>
+</head>
+<body>
+
+<header>
+  <div><div class="brand">R.3.U <b>SpoolBox</b></div></div>
+  <div class="sub">APS516 → xlsx</div>
+  <div class="spacer"></div>
+  <label class="opt" title="Write =VLOOKUP formulas in Supplier Name instead of the names read from the spool">
+    <input type="checkbox" id="optVlookup"> VLOOKUP formulas
+  </label>
+  <button id="exAll" disabled>Export all</button>
+  <button id="ex" class="go" disabled>Export .xlsx</button>
+</header>
+
+<main>
+  <aside>
+    <div class="aside-h"><span>SPOOL FILES</span><span id="cnt">0</span></div>
+    <div class="files" id="files"></div>
+    <div class="pick-btns">
+      <div class="drop" id="dropFolder">📁 Select folder<br><span style="font-size:10px;opacity:.75">loads every .txt inside</span></div>
+      <div class="drop" id="drop">Drop .txt here<br><span style="font-size:10px;opacity:.75">or click to browse</span></div>
+    </div>
+    <input type="file" id="pick" multiple accept=".txt" hidden>
+    <input type="file" id="pickDir" webkitdirectory hidden>
+  </aside>
+
+  <section>
+    <div class="bar" id="bar" style="display:none">
+      <div style="min-width:0;flex:1">
+        <div class="title" id="t">—</div>
+        <div class="meta" id="m">—</div>
+      </div>
+      <span class="tag n" id="tagLayout">—</span>
+      <span class="tag" id="tagRec">—</span>
+    </div>
+
+    <div class="split" id="split" style="display:none">
+      <div class="prev">
+        <div class="pane-h"><span>RAW .TXT</span><span id="prevInfo"></span></div>
+        <div class="prev-body" id="prevBody"></div>
+      </div>
+      <div class="tbl">
+        <div class="pane-h"><span>DETAIL ROWS</span><span id="tblInfo"></span></div>
+        <div class="tbl-scroll" id="tblScroll"></div>
+        <div class="tot-h">TOTALS</div>
+        <div class="tot-wrap" id="totWrap"></div>
+      </div>
+    </div>
+
+    <div class="empty" id="empty">
+      <div style="font-size:26px;opacity:.3">▤</div>
+      <div>No spool loaded</div>
+      <div class="k">Select a folder or drop an APS516 .txt</div>
+    </div>
+
+    <div class="rec" id="rec" style="display:none"></div>
+  </section>
+</main>
+
+<script>
+/* ---------- APS516 parser (verified against MOVEX printed totals) ---------- */
+const WF_HEADERS=["Supplier Code","Invoice No.","Supplier Name","Total debt","Overdue","Index",
+  "0 -  30 Days","31 -  60 Days","61 -  90 Days","91 - 120 Days","121 - 150 Days",
+  ">  150 Days"];
+const NUM_LABELS=["Total debt","Overdue","Index","0 -  30 Days","31 -  60 Days",
+  "61 -  90 Days","91 - 120 Days","121 - 150 Days",">  150 Days"];
+const DET="Supplier invoice no", SUM="Supplier   Name";
+
+function decode(buf){
+  const b=new Uint8Array(buf);
+  if(b.length>1&&b[0]===0xFF&&b[1]===0xFE) return new TextDecoder("utf-16le").decode(buf);
+  if(b.length>1&&b[0]===0xFE&&b[1]===0xFF) return new TextDecoder("utf-16be").decode(buf);
+  if(b.length>2&&b[0]===0xEF&&b[1]===0xBB&&b[2]===0xBF) return new TextDecoder("utf-8").decode(buf);
+  let z=0,n=Math.min(b.length,400);
+  for(let i=1;i<n;i+=2) if(b[i]===0) z++;
+  if(z>n/5) return new TextDecoder("utf-16le").decode(buf);
+  return new TextDecoder("utf-8").decode(buf);
+}
+function toLines(t){return t.replace(/\f/g,"\n").split("\n").map(l=>l.replace(/\r$/,""));}
+
+function toNum(tok){
+  let s=(tok||"").trim();
+  if(!s) return null;
+  let neg=s.endsWith("-");
+  if(neg) s=s.slice(0,-1);
+  s=s.replace(/,/g,"").trim();
+  if(!s||!/^\d*\.?\d+$/.test(s)) return null;
+  const v=parseFloat(s);
+  if(isNaN(v)) return null;
+  return neg?-v:v;
+}
+function isBanner(ln){
+  const s=ln.trim();
+  if(!s) return true;
+  if(s.startsWith("**")&&!s.includes("Currency..")&&!s.includes("Company...")
+     &&!s.includes("Supplier..")&&!s.includes("Payee.....")) return true;
+  if(/^(APS516|APS515|MOVEX|Cummins|---|Currency\.\.)/.test(s)) return true;
+  if(ln.includes(DET)||ln.includes(SUM)) return true;
+  if(s.includes("Past due payments")||s.includes("End of report")) return true;
+  return false;
+}
+function detect(L){
+  for(const l of L){ if(l.includes(DET)) return "detailed"; if(l.includes(SUM)) return "summary"; }
+  return null;
+}
+function findEdges(L){
+  for(const ln of L){
+    if(!ln.includes(DET)&&!ln.includes(SUM)) continue;
+    const ends=[];
+    for(const lab of NUM_LABELS){
+      const i=ln.indexOf(lab);
+      if(i===-1) return [null,null];
+      ends.push(i+lab.length);
+    }
+    let keyEnd=ln.indexOf("Total debt");
+    for(const p of L){
+      if(p===ln||isBanner(p)) continue;
+      const seg=p.slice(0,ends[0]);
+      const m=seg.match(/[\d,]+\.\d\d-?\s*$/);
+      if(m) keyEnd=Math.min(keyEnd,m.index);
+    }
+    keyEnd=Math.max(0,keyEnd);
+    const spans=[]; let lo=keyEnd;
+    for(let i=0;i<ends.length;i++){
+      let hi=(i===ends.length-1)?ends[i]+2:Math.floor((ends[i]+ends[i+1])/2)-5;
+      hi=Math.max(hi,ends[i]);
+      spans.push([lo,hi]); lo=hi;
+    }
+    return [keyEnd,spans];
+  }
+  return [null,null];
+}
+function splitNums(ln,spans){
+  return spans.map(([lo,hi])=>{
+    let seg=ln.slice(lo,hi);
+    const nxt=ln.slice(hi,hi+1);
+    if(nxt==="-"&&seg.trim()) seg+="-";
+    return toNum(seg);
+  });
+}
+function meta(L){
+  const o={title:"",currency:"",date:""};
+  for(const ln of L.slice(0,60)){
+    let m=ln.match(/(BC\d+\s+AP\s+AGING\s+\w+\s+\w+\s+[\w\s]+?)\s{2,}Time:/);
+    if(m&&!o.title) o.title=m[1].trim();
+    m=ln.match(/Currency\.+\s+(\w{3})/); if(m&&!o.currency) o.currency=m[1];
+    m=ln.match(/Date:\s*([\d/ ]+)/); if(m&&!o.date) o.date=m[1].trim();
+  }
+  return o;
+}
+function parse(text){
+  const L=toLines(text);
+  const layout=detect(L);
+  if(!layout) throw new Error("Not an APS516 age-distribution spool (no recognised column header).");
+  const [keyEnd,spans]=findEdges(L);
+  if(!spans) throw new Error("Could not locate the numeric column block.");
+  const info=meta(L); info.layout=layout;
+  const rows=[],labels=[],totals=[],names={},paySubs=[],unparsed=[];
+  let payee=null;
+  for(let li=0;li<L.length;li++){
+    const ln=L[li], s=ln.trim();
+    let m=s.match(/^(Payee\.{5}|Supplier\.{2})\s+(\S+)\s+(.*)$/);
+    if(m){
+      const code=m[2], nm=m[3].trim();
+      if(nm&&(!names[code]||nm.length>names[code].length)) names[code]=nm;
+      if(m[1].startsWith("Payee")){ payee=code; labels.push({code,name:nm,at:rows.length}); }
+      continue;
+    }
+    m=s.match(/^\*{3}\s+Payee\.{5}\s+(\S+)/);
+    if(m){ paySubs.push({code:m[1],nums:splitNums(ln,spans),at:rows.length}); continue; }
+    if(/^\*{3,}\s*(Supplier\.{2}|Payee\.{5})/.test(s)) continue;
+    m=s.match(/^(\*{2}\s+Currency\.{2}|\*\s+Company\.{3})\s+(\S+)/);
+    if(m){ totals.push({label:m[1].trim(),key:m[2],nums:splitNums(ln,spans)}); continue; }
+    if(isBanner(ln)) continue;
+    const nums=splitNums(ln,spans);
+    if(nums[0]===null){
+      if(/[\d,]+\.\d\d/.test(ln)) unparsed.push({li,text:ln.trim().slice(0,80)});
+      continue;
+    }
+    const key=ln.slice(0,keyEnd).trim();
+    if(!key){
+      if(/[\d,]+\.\d\d/.test(ln)) unparsed.push({li,text:ln.trim().slice(0,80)});
+      continue;
+    }
+    let invoice,code;
+    if(layout==="detailed"){ invoice=key; code=payee; }
+    else { invoice=key.split(/\s+/)[0]; code=invoice; }
+    rows.push({invoice,code,nums,li});
+  }
+  return {info,rows,labels,totals,names,paySubs,unparsed,rawLines:L};
+}
+function verify(p){
+  const gt=p.totals.find(t=>t.label.includes("Currency"));
+  if(!gt) return null;
+  const names=["Total debt","Overdue","Index","0-30","31-60","61-90","91-120","121-150",">150"];
+  const out=[];
+  names.forEach((n,i)=>{
+    if(n==="Index") return;
+    const s=Math.round(p.rows.reduce((a,r)=>a+(r.nums[i]||0),0)*100)/100;
+    const e=gt.nums[i];
+    out.push({field:n,parsed:s,printed:e,ok:e!==null&&Math.abs(s-e)<0.02});
+  });
+  return out;
+}
+function audit(p){
+  /* Per-payee reconciliation: each '*** Payee' subtotal on the spool must equal the
+     sum of the rows parsed since the previous subtotal. Segment-based, so repeated
+     payee codes can't cross-contaminate. Catches dropped all-zero rows that the
+     grand-total check is blind to. */
+  let prev=0, ok=0; const bad=[];
+  for(const sub of p.paySubs){
+    const seg=p.rows.slice(prev,sub.at); prev=sub.at;
+    let good=seg.length>0;
+    for(let k=0;k<9;k++){
+      if(k===2) continue;                    /* Index column is a ratio, not a sum */
+      const s=Math.round(seg.reduce((a,r)=>a+(r.nums[k]||0),0)*100)/100;
+      const e=sub.nums[k];
+      if(e===null||Math.abs(s-e)>=0.02){ good=false; break; }
+    }
+    good?ok++:bad.push(sub.code);
+  }
+  const orphans=p.rows.length-prev;          /* rows after the last subtotal */
+  return {subOk:ok,subTotal:p.paySubs.length,subBad:bad,orphans,unparsed:p.unparsed.length};
+}
+
+/* ---------- state ---------- */
+const S={files:[],cur:-1,selRow:-1};
+const $=id=>document.getElementById(id);
+const fmt=v=>v===null||v===undefined?"":v.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const maybeInt=v=>{const s=String(v??"").trim();return /^\d+$/.test(s)?parseInt(s,10):s;};
+const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+function addFiles(fl){
+  const txts=[...fl].filter(f=>/\.txt$/i.test(f.name));
+  let pend=txts.length;
+  if(!pend) return;
+  txts.forEach(f=>{
+    const rd=new FileReader();
+    rd.onload=e=>{
+      const rec={name:f.name.replace(/\.txt$/i,""),ok:false};
+      try{
+        const p=parse(decode(e.target.result));
+        rec.p=p; rec.v=verify(p); rec.a=audit(p); rec.ok=true;
+        rec.allOk=(rec.v?rec.v.every(x=>x.ok):false)
+          &&rec.a.subBad.length===0&&rec.a.unparsed===0&&rec.a.orphans===0;
+      }catch(err){ rec.err=err.message; }
+      S.files.push(rec);
+      if(--pend===0){ if(S.cur<0) S.cur=0; S.selRow=-1; render(); }
+    };
+    rd.readAsArrayBuffer(f);
+  });
+}
+function renderList(){
+  $("cnt").textContent=S.files.length;
+  $("files").innerHTML=S.files.map((f,i)=>{
+    let m;
+    if(!f.ok) m='<span style="color:var(--red)">parse failed</span>';
+    else m=`${f.p.info.currency||"—"} ${f.p.info.layout} · ${f.p.rows.length}`;
+    return `<div class="f ${i===S.cur?"on":""}" data-i="${i}">
+      <span class="f-x" data-x="${i}">×</span>
+      <div class="f-n">${esc(f.name)}</div><div class="f-m">${m}</div></div>`;
+  }).join("");
+  $("files").querySelectorAll(".f").forEach(el=>{
+    el.onclick=ev=>{
+      if(ev.target.dataset.x!==undefined){
+        const i=+ev.target.dataset.x;
+        S.files.splice(i,1);
+        if(S.cur>=S.files.length) S.cur=S.files.length-1;
+        S.selRow=-1; render(); ev.stopPropagation(); return;
+      }
+      S.cur=+el.dataset.i; S.selRow=-1; render();
+    };
+  });
+}
+function supplierName(p,row){
+  return p.names[row.code]||"";
+}
+function render(){
+  renderList();
+  const f=S.files[S.cur];
+  const has=!!f&&f.ok;
+  $("ex").disabled=!has;
+  $("exAll").disabled=!S.files.some(x=>x.ok);
+  if(!f||!f.ok){
+    $("split").style.display="none"; $("rec").style.display="none";
+    $("empty").style.display="flex";
+    if(!f){ $("bar").style.display="none"; }
+    else{
+      $("bar").style.display="flex";
+      $("t").textContent=f.name; $("m").textContent="—";
+      $("tagLayout").textContent="error"; $("tagLayout").className="tag bad";
+      $("tagRec").style.display="none";
+      $("empty").innerHTML=`<div style="color:var(--red);font-size:22px">!</div><div>Could not parse this file</div><div class="k">${esc(f.err)}</div>`;
+    }
+    return;
+  }
+  const p=f.p;
+  $("empty").style.display="none";
+  $("bar").style.display="flex";
+  $("split").style.display="flex";
+  $("t").textContent=p.info.title||f.name;
+  $("m").textContent=`APS516 · ${p.info.date||"—"} · ${p.rows.length} rows`;
+  $("tagLayout").textContent=p.info.layout; $("tagLayout").className="tag n";
+  $("tagRec").style.display="";
+  $("tagRec").textContent=f.allOk?"reconciled":"mismatch";
+  $("tagRec").className="tag "+(f.allOk?"ok":"bad");
+
+  /* raw preview */
+  $("prevInfo").textContent=p.rawLines.length+" lines";
+  $("prevBody").innerHTML=p.rawLines.map((l,i)=>
+    `<span class="ln" id="rl${i}"><span class="no">${i+1}</span>${esc(l)||" "}</span>`).join("");
+
+  /* detail table */
+  $("tblInfo").textContent=p.rows.length+" rows";
+  let h='<table><thead><tr>'+WF_HEADERS.map(x=>`<th>${x}</th>`).join("")+'</tr></thead><tbody>';
+  p.rows.forEach((r,i)=>{
+    h+=`<tr data-r="${i}" class="${i===S.selRow?"sel":""}"><td>${esc(r.code??"")}</td><td>${esc(r.invoice)}</td><td>${esc(supplierName(p,r))}</td>`+
+       r.nums.map(v=>{
+         const c=v===null?"zero":(v<0?"neg":(v===0?"zero":""));
+         return `<td class="${c}">${v===null?"":fmt(v)}</td>`;
+       }).join("")+`</tr>`;
+  });
+  h+="</tbody></table>";
+  $("tblScroll").innerHTML=h;
+  $("tblScroll").querySelectorAll("tr[data-r]").forEach(tr=>{
+    tr.onclick=()=>{
+      S.selRow=+tr.dataset.r;
+      $("tblScroll").querySelectorAll("tr.sel").forEach(x=>x.classList.remove("sel"));
+      tr.classList.add("sel");
+      document.querySelectorAll(".ln.hl").forEach(x=>x.classList.remove("hl"));
+      const li=p.rows[S.selRow].li;
+      const el=$("rl"+li);
+      if(el){ el.classList.add("hl"); el.scrollIntoView({block:"center",behavior:"smooth"}); }
+    };
+  });
+
+  /* totals table */
+  let th='<table><thead><tr>'+["Level","Key",...NUM_LABELS].map(x=>`<th>${x}</th>`).join("")+'</tr></thead><tbody>';
+  p.totals.forEach(t=>{
+    th+=`<tr><td style="text-align:left">${esc(t.label)}</td><td style="text-align:left">${esc(t.key)}</td>`+
+        t.nums.map(v=>`<td class="${v<0?"neg":""}">${v===null?"":fmt(v)}</td>`).join("")+`</tr>`;
+  });
+  th+="</tbody></table>";
+  $("totWrap").innerHTML=th;
+
+  /* reconciliation + audit footer */
+  const a=f.a;
+  $("rec").style.display="flex";
+  $("rec").innerHTML='<span style="color:var(--ink-dim)">Grand total:</span>'+
+    f.v.map(v=>`<span>${v.field} <b class="${v.ok?"":"x"}">${v.ok?"✓":"✗"}</b></span>`).join("")+
+    `<span style="color:var(--ink-dim);margin-left:8px">Payee subtotals:</span>`+
+    `<span><b class="${a.subBad.length?"x":""}">${a.subOk}/${a.subTotal} ✓</b>${a.subBad.length?" bad: "+esc(a.subBad.slice(0,5).join(",")):""}</span>`+
+    `<span style="color:var(--ink-dim)">Unclassified lines:</span>`+
+    `<span><b class="${a.unparsed?"x":""}">${a.unparsed}</b></span>`+
+    (a.orphans?`<span><b class="x">${a.orphans} rows after last subtotal</b></span>`:"")+
+    (f.allOk?'<span style="color:var(--green);margin-left:auto">every check passed — nothing dropped</span>'
+            :'<span style="color:var(--red);margin-left:auto">check flagged items before use</span>');
+}
+
+/* ---------- export ---------- */
+function sheetFor(f,useFormula){
+  const p=f.p, cur=p.info.currency||"XXX";
+  const lk=cur==="AUD"?"AU":cur;
+  const aoa=[WF_HEADERS.slice()];
+  const F=[];
+  let r=2;
+  p.rows.forEach(row=>{
+    aoa.push([maybeInt(row.code),maybeInt(row.invoice),
+      useFormula?null:supplierName(p,row),
+      ...row.nums.map(v=>v===null?0:v)]);
+    if(useFormula) F.push([r,`VLOOKUP(A${r},[1]${lk}!$A:$B,2,0)`]);
+    r++;
+  });
+  aoa.push([]); r++;
+  p.totals.forEach(t=>{aoa.push([t.label,maybeInt(t.key),"",...t.nums.map(v=>v===null?0:v)]); r++;});
+  aoa.push([]);
+  aoa.push(["","","","","","*** End of","report ***","","","","",""]);
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  F.forEach(([rw,fx])=>{ ws["C"+rw]={t:"s",f:fx}; });
+  const rng=XLSX.utils.decode_range(ws["!ref"]);
+  for(let R=1;R<=rng.e.r;R++)
+    for(let C=3;C<=11;C++){
+      const a=XLSX.utils.encode_cell({r:R,c:C});
+      if(ws[a]&&ws[a].t==="n") ws[a].z="#,##0.00";
+    }
+  ws["!cols"]=[13,20,34,15,14,8,14,14,14,14,14,14].map(w=>({wch:w}));
+  ws["!freeze"]={xSplit:0,ySplit:1};
+  return {ws,name:("WF-"+cur).slice(0,31)};
+}
+function expOne(){
+  const f=S.files[S.cur]; if(!f||!f.ok) return;
+  const wb=XLSX.utils.book_new();
+  const {ws,name}=sheetFor(f,$("optVlookup").checked);
+  XLSX.utils.book_append_sheet(wb,ws,name);
+  XLSX.writeFile(wb,f.name+".xlsx");
+}
+function expAll(){
+  const ok=S.files.filter(f=>f.ok); if(!ok.length) return;
+  const wb=XLSX.utils.book_new(); const used={};
+  ok.forEach(f=>{
+    let {ws,name}=sheetFor(f,$("optVlookup").checked);
+    let n=name,k=2; while(used[n]){n=(name+"_"+k++).slice(0,31);} used[n]=1;
+    XLSX.utils.book_append_sheet(wb,ws,n);
+  });
+  XLSX.writeFile(wb,"APS516_export.xlsx");
+}
+
+/* ---------- wiring ---------- */
+$("ex").onclick=expOne;
+$("exAll").onclick=expAll;
+$("drop").onclick=()=>$("pick").click();
+$("dropFolder").onclick=()=>$("pickDir").click();
+$("pick").onchange=e=>{addFiles(e.target.files); e.target.value="";};
+$("pickDir").onchange=e=>{addFiles(e.target.files); e.target.value="";};
+["dragenter","dragover"].forEach(ev=>document.addEventListener(ev,e=>{
+  e.preventDefault(); $("drop").classList.add("over");
+}));
+["dragleave","drop"].forEach(ev=>document.addEventListener(ev,e=>{
+  e.preventDefault();
+  if(ev==="drop"||e.relatedTarget===null) $("drop").classList.remove("over");
+}));
+document.addEventListener("drop",e=>{
+  e.preventDefault(); $("drop").classList.remove("over");
+  if(e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
+});
+render();
+</script>
+</body>
+</html>

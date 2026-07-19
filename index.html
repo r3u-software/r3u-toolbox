@@ -322,6 +322,7 @@ document.addEventListener('change',e=>{
   if(id==='roFile') fileToTextarea(e.target,'roIn',['item','hand','min','stock']);
   if(id==='bvFile') fileToTextarea(e.target,'bvIn',['category','budget','actual']);
   if(id==='tmFile') fileToTextarea(e.target,'tmIn',['employee','training','expiry']);
+  if(id==='hcFile') hcFileLoad(e);
 });
 const HOW=(steps,sampleFn)=>`<details class="howto"><summary>📖 How to use this tool ${sampleFn?'(+ sample data)':''}</summary>
   <ol>${steps.map(s=>`<li>${s}</li>`).join('')}</ol>
@@ -388,6 +389,8 @@ const TOOLS=[
   desc:"All these tools are free. If they save you time, scan the QR to buy the developer a coffee."},
  {id:"hrcalc",dept:"HR / People",icon:"🧮",name:"Leave & 13th Month Calculator",
   desc:"Compute remaining VL/SL balances and 13th month pay (PH formula) in seconds."},
+ {id:"hoursconv",dept:"HR / People",icon:"⏱️",name:"Hours Converter (h:mm ⇄ decimal)",wide:true,
+  desc:"Turn Excel timesheet values like 695:30 into decimal hours (695.50) for payroll — or back. Totals and Excel export included."},
  {id:"coe",dept:"HR / People",icon:"📜",name:"Certificate of Employment",
   desc:"Fill a short form → formal print-ready COE with your company header."},
  {id:"attendance",dept:"HR / People",icon:"🕐",name:"Attendance Summarizer",wide:true,
@@ -658,7 +661,7 @@ spoolbox:()=>`
   ])}
   <iframe id="sbFrame" src="R3U_SpoolBox.html"></iframe>
   <div class="note">If the app doesn't load, make sure <b>R3U_SpoolBox.html</b> sits in the same folder as this index.html (same rule on GitHub).</div>`,
-  
+
 /* ── QUICK CHARTS ── */
 quickchart:()=>`
   ${HOW([
@@ -1152,6 +1155,35 @@ hrcalc:()=>`
   <div class="big-result" id="m13Out" style="display:none"></div>
   <div class="note">Reference computations only — confirm with HR/payroll policy.</div>`,
 
+/* ── HR: HOURS CONVERTER ── */
+hoursconv:()=>`
+  ${HOW([
+   '<b>Your case:</b> upload the punch file (employee names + hours in h:mm, names repeat across many rows). Pick the Name column and the Hours column, click Total — it converts h:mm to decimal AND sums every row per employee, so the output is one row per person: Name · Total h:mm · Total decimal hours.',
+   'Output columns: Name · Total h:mm · Total decimal hrs · ÷ 24 (decimal divided by 24) · Punches. Example: Juan Cruz 8:00 + 6:00 + 4:30 → 18:30 · 18.50 · 0.7708 · 3.',
+   '<b>Quick list:</b> or just paste hours below to convert a plain list (no grouping).',
+  ],'sampleHours()')}
+  <div class="tabs">
+    <button class="tab active" id="hcT1" onclick="hcMode('to')">h:mm → decimal</button>
+    <button class="tab" id="hcT2" onclick="hcMode('from')">decimal → h:mm</button>
+  </div>
+
+  <h3 style="margin:8px 0 4px">📄 Total hours per employee (from a punch file)</h3>
+  <input type="file" id="hcFile" accept=".xlsx,.xls,.csv">
+  <div class="row" id="hcPick" style="display:none">
+    <div><label>Sheet</label><select id="hcSheet" onchange="hcCols()"></select></div>
+    <div><label>Name column</label><select id="hcNameCol"></select></div>
+    <div><label>Hours column (h:mm)</label><select id="hcCol"></select></div>
+  </div>
+  <button class="btn" id="hcFileBtn" style="display:none" onclick="hcFileRun()">📊 Total per employee</button>
+  <button class="btn ghost" id="hcFileExp" style="display:none" onclick="hcFileExport()">⬇ Export result .xlsx</button>
+  <div class="out" id="hcFileOut" style="display:none"></div>
+
+  <h3 style="margin:22px 0 4px">✍️ Or paste a quick list</h3>
+  <textarea id="hcIn" placeholder="8:00&#10;6:00&#10;695:30"></textarea>
+  <button class="btn" onclick="hcRun()">⏱ Convert list</button>
+  <button class="btn ghost" onclick="hcExport()">⬇ Export list .xlsx</button>
+  <div class="out" id="hcOut" style="display:none"></div>`,
+
 /* ── HR: COE ── */
 coe:()=>`
   ${HOW([
@@ -1614,6 +1646,26 @@ function sampleGate(){ set('gName','Juan Dela Cruz'); set('gComp','ABC Trucking'
 function sampleRaffle(){ set('rfIn','Juan\nMaria\nPedro\nAna\nCarlo\nLiza\nRamon\nGrace'); }
 function sampleScore(){ set('scIn','Team Accounting\nTeam HSE\nTeam Services\nTeam IT'); }
 function sampleChart(){ set('chIn','Accounting, 120\nHSE, 80\nServices, 200\nAdmin, 45\nIT, 60'); set('chTitle','Requests per Department — 2026'); }
+function sampleHours(){
+  set('hcIn','8:00\n6:00\n695:30\n1:00\n32:00\n12:00\n24:00\n9:00\n396:00\n16:00');
+  const data=[['Employee','Hours'],
+    ['Abagon, Joemar T','1416:30'],['Abagon, Joemar T','2000:00'],
+    ['Abanes, Raymart A','2120:00'],
+    ['ABAY, KYLE REISTER','88:00'],
+    ['Adan, Irish','1057:00'],
+    ['Aguila, Liezel A','2120:00'],
+    ['Abagon, Joemar T','0:00'],
+    ['Adan, Irish','0:00']];
+  HCWB=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(HCWB,XLSX.utils.aoa_to_sheet(data),'Punches');
+  HCWB._fname='sample_punches.xlsx';
+  const s=document.getElementById('hcSheet');
+  s.innerHTML='<option>Punches</option>';
+  document.getElementById('hcPick').style.display='flex';
+  document.getElementById('hcFileBtn').style.display='inline-block';
+  hcCols();
+  hcFileRun();
+}
 function sampleAtt(){ set('attIn','Juan Dela Cruz, 2026-07-14, 08:10, 17:00\nJuan Dela Cruz, 2026-07-15, 07:55, 17:05\nMaria Santos, 2026-07-14, 07:58, 16:30\nMaria Santos, 2026-07-15, 08:20, 17:00'); }
 function sampleQuote(){ set('qtNo','Q-2026-001'); set('qtCust','ABC Mining Corp.'); set('qtAttn','Engr. R. Lopez'); set('qtBy','Aftermarket Sales');
   set('qtItems','AF25667, Air Filter, 2, 3500\nLF9080, Oil Filter, 4, 1250\n4088725, Fuel Injector, 1, 48500');
@@ -2599,6 +2651,126 @@ function m13Run(){
   const o=document.getElementById('m13Out'); o.style.display='block';
   o.textContent=PESO(b*m/12);
 }
+/* HR — hours converter */
+let HCMODE='to';
+function hcMode(m){
+  HCMODE=m;
+  document.getElementById('hcT1').classList.toggle('active',m==='to');
+  document.getElementById('hcT2').classList.toggle('active',m==='from');
+  document.getElementById('hcIn').placeholder=m==='to'?'8:00\n6:00\n695:30':'8.00\n6.00\n695.5';
+}
+function hcToken(line){
+  const t=line.split(',').map(s=>s.trim());
+  for(const c of t){ if(/\d/.test(c)) return c; }
+  return line.trim();
+}
+function hmToDec(s){
+  s=s.trim();
+  if(s.includes(':')){
+    const p=s.split(':'); const h=parseFloat(p[0])||0, m=parseFloat(p[1])||0, sec=parseFloat(p[2]||0)||0;
+    return (s.trim().startsWith('-')?-1:1)*(Math.abs(h)+m/60+sec/3600);
+  }
+  const v=parseFloat(s.replace(/,/g,'')); return isNaN(v)?null:v;
+}
+function decToHm(dec){
+  const neg=dec<0; dec=Math.abs(dec);
+  let h=Math.floor(dec), m=Math.round((dec-h)*60);
+  if(m===60){ h++; m=0; }
+  return (neg?'-':'')+h+':'+String(m).padStart(2,'0');
+}
+function hcRun(){
+  const lines=document.getElementById('hcIn').value.split(/\r?\n/).filter(l=>l.trim());
+  const rows=[]; let total=0,bad=0;
+  lines.forEach(l=>{
+    const tok=hcToken(l);
+    if(HCMODE==='to'){
+      const dec=hmToDec(tok);
+      if(dec===null){ bad++; return; }
+      total+=dec; rows.push([tok,dec.toFixed(2)]);
+    } else {
+      const dec=parseFloat(tok.replace(/,/g,''));
+      if(isNaN(dec)){ bad++; return; }
+      total+=dec; rows.push([tok,decToHm(dec)]);
+    }
+  });
+  window.HCL={rows,total,mode:HCMODE};
+  const o=document.getElementById('hcOut'); o.style.display='block';
+  const h1=HCMODE==='to'?'h:mm':'decimal', h2=HCMODE==='to'?'decimal hrs':'h:mm';
+  o.innerHTML=`<table><tr><th>#</th><th>${h1}</th><th>${h2}</th></tr>`+
+    rows.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`).join('')+
+    `<tr><th>TOTAL</th><th>${HCMODE==='to'?decToHm(total):total.toFixed(2)}</th><th>${HCMODE==='to'?total.toFixed(2)+' hrs':decToHm(total)}</th></tr></table>`+
+    (bad?`<div class="note">⚠ ${bad} line(s) skipped (no readable number).</div>`:'');
+}
+function hcExport(){
+  if(!window.HCL){ alert('Convert first.'); return; }
+  const h=HCMODE==='to'?['h:mm','Decimal hrs']:['Decimal','h:mm'];
+  aoaXlsx([h,...HCL.rows.map(r=>[r[0],HCMODE==='to'?+r[1]:r[1]]),
+    ['TOTAL',HCMODE==='to'?+HCL.total.toFixed(2):decToHm(HCL.total)]],'hours_converted_'+today()+'.xlsx','Hours');
+}
+/* whole-file convert — keeps names + all columns */
+let HCWB=null,HCAOA=null;
+async function hcFileLoad(e){
+  const f=e.target.files[0]; if(!f) return;
+  HCWB=XLSX.read(await f.arrayBuffer(),{type:'array'}); HCWB._fname=f.name;
+  const s=document.getElementById('hcSheet');
+  s.innerHTML=HCWB.SheetNames.map(n=>`<option>${esc(n)}</option>`).join('');
+  document.getElementById('hcPick').style.display='flex';
+  document.getElementById('hcFileBtn').style.display='inline-block';
+  hcCols();
+}
+function hcCols(){
+  const sn=document.getElementById('hcSheet').value;
+  const rows=XLSX.utils.sheet_to_json(HCWB.Sheets[sn],{header:1,defval:'',raw:false});
+  const head=rows[0]||[];
+  const opts=head.map((h,i)=>`<option value="${i}">${esc(h||('Column '+(i+1)))}</option>`).join('');
+  const nameSel=document.getElementById('hcNameCol'),colSel=document.getElementById('hcCol');
+  nameSel.innerHTML=opts; colSel.innerHTML=opts;
+  let hoursC=-1;
+  head.forEach((h,i)=>{ if(/hour|pay|time|total/i.test(String(h))&&hoursC<0) hoursC=i; });
+  if(hoursC<0) for(let i=0;i<head.length;i++){ if(rows.slice(1,8).some(r=>/^\s*\d+:\d+/.test(String(r[i]||'')))){ hoursC=i; break; } }
+  let nameC=-1;
+  head.forEach((h,i)=>{ if(/name|employee|emp|worker/i.test(String(h))&&nameC<0) nameC=i; });
+  if(nameC<0) for(let i=0;i<head.length;i++){ if(i!==hoursC&&rows.slice(1,8).some(r=>/[A-Za-z]{2,}/.test(String(r[i]||'')))){ nameC=i; break; } }
+  if(hoursC>=0) colSel.value=hoursC;
+  if(nameC>=0) nameSel.value=nameC;
+}
+function hcFileRun(){
+  if(!HCWB){ alert('Upload a file first.'); return; }
+  const sn=document.getElementById('hcSheet').value;
+  const ni=parseInt(document.getElementById('hcNameCol').value);
+  const ci=parseInt(document.getElementById('hcCol').value);
+  if(ni===ci){ alert('Name and Hours must be different columns.'); return; }
+  const rows=XLSX.utils.sheet_to_json(HCWB.Sheets[sn],{header:1,defval:'',raw:false});
+  const groups={}, order=[]; let bad=0,total=0,punches=0;
+  rows.slice(1).forEach(r=>{
+    const name=String(r[ni]??'').trim();
+    if(!name) return;
+    if(/nothing follows|prepared by|^total$|grand total/i.test(name)) return;
+    const key=name.toLowerCase();
+    const raw=String(r[ci]??'').trim();
+    const d=raw?hmToDec(raw):0;
+    if(raw&&d===null){ bad++; return; }
+    if(!groups[key]){ groups[key]={name,sum:0,rows:0}; order.push(key); }
+    groups[key].sum+=(d||0); groups[key].rows++; total+=(d||0); punches++;
+  });
+  const list=order.map(k=>groups[k]);
+  HCAOA=[['Name','Total h:mm','Total decimal hrs','÷ 24','Punches'],
+    ...list.map(g=>[g.name,decToHm(g.sum),+g.sum.toFixed(2),+(g.sum/24).toFixed(4),g.rows]),
+    ['TOTAL',decToHm(total),+total.toFixed(2),+(total/24).toFixed(4),punches]];
+  const o=document.getElementById('hcFileOut'); o.style.display='block';
+  document.getElementById('hcFileExp').style.display='inline-block';
+  const prev=HCAOA.slice(0,21);
+  o.innerHTML=`<b class="ok-note">✅ ${punches} punch rows → ${list.length} employees. Grand total ${total.toFixed(2)} hrs (${decToHm(total)}).</b>
+    <table>${prev.map((r,ri)=>'<tr>'+r.map(c=>`<${ri?'td':'th'}>${esc(c)}</${ri?'td':'th'}>`).join('')+'</tr>').join('')}</table>
+    ${HCAOA.length>21?`<div class="note">Showing first 20 of ${list.length} employees — full list is in the export.</div>`:''}
+    ${bad?`<div class="note">⚠ ${bad} row(s) had an unreadable h:mm value and were skipped.</div>`:''}`;
+}
+function hcFileExport(){
+  if(!HCAOA){ alert('Run Total per employee first.'); return; }
+  const base=(HCWB._fname||'timesheet').replace(/\.(xlsx|xls|csv)$/i,'');
+  aoaXlsx(HCAOA,base+'_totals.xlsx','Totals');
+}
+
 /* HR — COE */
 function coePrint(){
   const g=id=>document.getElementById(id).value;

@@ -10,6 +10,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js"></script>
 <style>
 :root{
   --sky:#0ea5e9; --sky-d:#0284c7; --blue:#2563eb; --navy:#0a3158;
@@ -339,8 +341,16 @@ const TOOLS=[
   desc:"Load an Excel/CSV — auto totals, averages, top items by category, chart, and a printable one-page report."},
  {id:"pdf2office",dept:"Everyone",icon:"📝",name:"PDF → Word / Excel / PowerPoint",soon:true,
   desc:"True format conversion needs server-side processing — planned once we host a small converter service."},
- {id:"ocrpdf",dept:"Everyone",icon:"👁️",name:"OCR Scanned PDF",soon:true,
-  desc:"Make scanned documents searchable. Possible in-browser via Tesseract.js — heavy download, planned as optional add-on."},
+ {id:"ocrpdf",dept:"Everyone",icon:"👁️",name:"OCR — Scanned PDF / Photo to Text",wide:true,
+  desc:"Read the text out of a scanned PDF or a photo of a document — copy-paste ready. Runs in your browser."},
+ {id:"flowchart",dept:"Everyone",icon:"🔀",name:"Flowchart Maker",wide:true,
+  desc:"Type simple arrows like A --> B and get a clean flowchart — download as PNG for documents and slides."},
+ {id:"imgtool",dept:"Everyone",icon:"🖼️",name:"Image Compressor / Resizer",wide:true,
+  desc:"Shrink photos for email or reports — resize to a max width, adjust quality, before/after sizes shown."},
+ {id:"unitconv",dept:"Everyone",icon:"📏",name:"Unit Converter",
+  desc:"Length, weight, temperature, volume, area — instant conversion as you type."},
+ {id:"pctcalc",dept:"Everyone",icon:"➗",name:"Percentage Calculator",
+  desc:"X% of Y, what percent X is of Y, and percent increase or decrease — the three classics."},
  {id:"protectpdf",dept:"Everyone",icon:"🔒",name:"Protect / Unlock / Repair PDF",soon:true,
   desc:"Password-encrypt, remove known passwords, and repair damaged PDFs — needs an extra crypto library, coming next."},
  {id:"aiassist",dept:"Everyone",icon:"🤖",name:"AI Assistant",soon:true,
@@ -397,8 +407,8 @@ const TOOLS=[
   desc:"Upload or paste the biometric export — get per-employee days, lates, and undertime, exportable to Excel."},
  {id:"onboard",dept:"HR / People",icon:"🧳",name:"Onboarding Checklist",
   desc:"New hire name + editable checklist → printable first-day checklist with tick boxes."},
- {id:"orgchart",dept:"HR / People",icon:"🌳",name:"Org Chart Builder",soon:true,
-  desc:"Type names and who they report to → visual org chart → PNG. Planned next."},
+ {id:"orgchart",dept:"HR / People",icon:"🌳",name:"Org Chart Builder",wide:true,
+  desc:"Type names, roles, and who reports to whom → a printable organization tree."},
  {id:"quote",dept:"Aftermarket & Parts",icon:"💰",name:"Quotation Generator",wide:true,
   desc:"Items + prices → formal printable quotation with line totals, VAT, and grand total."},
  {id:"pricelist",dept:"Aftermarket & Parts",icon:"🏷️",name:"Price List Lookup",
@@ -429,6 +439,8 @@ const TOOLS=[
   desc:"Paste or upload Category, Budget, Actual → variance table with % and a comparison chart."},
  {id:"loancalc",dept:"Finance & Payroll",icon:"🏦",name:"Loan / Amortization Calculator",
   desc:"Principal, rate, term → monthly payment, total interest, and the full schedule (exportable)."},
+ {id:"pesowords",dept:"Finance & Payroll",icon:"🔤",name:"Amount in Words",
+  desc:"₱12,345.60 → Twelve Thousand Three Hundred Forty-Five Pesos and 60/100 Only — for checks and vouchers."},
  {id:"trainsheet",dept:"Training",icon:"🎓",name:"Training Attendance Sheet",
   desc:"Course, trainer, attendees → printable sign-off sheet."},
  {id:"certgen",dept:"Training",icon:"🏅",name:"Certificate Generator",wide:true,
@@ -515,6 +527,7 @@ function openTool(id){
   if(id==='potrack') ptRender();
   if(id==='pettycash') petRender();
   if(id==='decisionlog') dcRender();
+  if(id==='unitconv') ucFill();
 }
 function closeModal(){ overlay.classList.remove('open'); document.getElementById('mBody').innerHTML=''; }
 overlay.addEventListener('click',e=>{ if(e.target===overlay) closeModal(); });
@@ -1159,14 +1172,9 @@ hrcalc:()=>`
 hoursconv:()=>`
   ${HOW([
    '<b>Your case:</b> upload the punch file (employee names + hours in h:mm, names repeat across many rows). Pick the Name column and the Hours column, click Total — it converts h:mm to decimal AND sums every row per employee, so the output is one row per person: Name · Total h:mm · Total decimal hours.',
-   'Output columns: Name · Total h:mm · Total decimal hrs · ÷ 24 (decimal divided by 24) · Punches. Example: Juan Cruz 8:00 + 6:00 + 4:30 → 18:30 · 18.50 · 0.7708 · 3.',
+   'Output columns: Name · Total h:mm · Total decimal hrs · ÷ 24 (decimal divided by 24) · Punches. Example: Employee A 8:00 + 6:00 + 4:30 → 18:30 · 18.50 · 0.7708 · 3.',
    '<b>Quick list:</b> or just paste hours below to convert a plain list (no grouping).',
   ],'sampleHours()')}
-  <div class="tabs">
-    <button class="tab active" id="hcT1" onclick="hcMode('to')">h:mm → decimal</button>
-    <button class="tab" id="hcT2" onclick="hcMode('from')">decimal → h:mm</button>
-  </div>
-
   <h3 style="margin:8px 0 4px">📄 Total hours per employee (from a punch file)</h3>
   <input type="file" id="hcFile" accept=".xlsx,.xls,.csv">
   <div class="row" id="hcPick" style="display:none">
@@ -1180,6 +1188,10 @@ hoursconv:()=>`
 
   <h3 style="margin:22px 0 4px">✍️ Or paste a quick list</h3>
   <textarea id="hcIn" placeholder="8:00&#10;6:00&#10;695:30"></textarea>
+  <div class="tabs" style="margin-top:8px">
+    <button class="tab active" id="hcT1" onclick="hcMode('to')">h:mm → decimal</button>
+    <button class="tab" id="hcT2" onclick="hcMode('from')">decimal → h:mm</button>
+  </div>
   <button class="btn" onclick="hcRun()">⏱ Convert list</button>
   <button class="btn ghost" onclick="hcExport()">⬇ Export list .xlsx</button>
   <div class="out" id="hcOut" style="display:none"></div>`,
@@ -1617,6 +1629,127 @@ decisionlog:()=>`
   <button class="btn sm ghost" onclick="dcExport()">⬇ Export CSV</button>
   <button class="btn sm ghost danger" onclick="dcClear()">Clear log</button>
   <div class="out" id="dcOut"></div>`,
+
+/* ── OCR ── */
+ocrpdf:()=>`
+  ${HOW([
+   'Choose a scanned PDF, a photo of a document, or a screenshot.',
+   'Click <b>Read Text</b>. The first run downloads the OCR engine (~15 MB) — after that it is cached. A clear, straight, well-lit scan gives the best result.',
+   'The extracted text appears below — edit it freely, then <b>Copy</b> or <b>Download .txt</b>. PDFs process up to the first 10 pages.',
+  ])}
+  <label>Scanned PDF or image (JPG/PNG)</label>
+  <input type="file" id="ocFile" accept=".pdf,image/*">
+  <div class="row">
+    <div><label>Language</label>
+      <select id="ocLang"><option value="eng">English</option><option value="eng+fil">English + Filipino</option></select></div>
+  </div>
+  <button class="btn" onclick="ocrRun()">👁 Read Text</button>
+  <button class="btn ghost" onclick="copyText('ocOut')">📋 Copy</button>
+  <button class="btn ghost" onclick="ocrTxt()">⬇ Download .txt</button>
+  <div class="hint" id="ocStatus"></div>
+  <textarea id="ocOut" style="min-height:200px" placeholder="Extracted text appears here…"></textarea>
+  <div class="note">Everything runs in your browser — the document is never uploaded anywhere.</div>`,
+
+/* ── FLOWCHART ── */
+flowchart:()=>`
+  ${HOW([
+   'Describe the flow with arrows, one step per line. Boxes: <b>A[Label]</b> · Decisions: <b>B{Question?}</b> · Arrows: <b>--></b> · Arrow with label: <b>-->|Yes|</b>',
+   'Click <b>Render</b> to see the chart, then <b>Download PNG</b> for documents and slides.',
+   'First line sets direction: <b>graph TD</b> = top-down, <b>graph LR</b> = left-right.',
+  ],'sampleFc()')}
+  <label>Flowchart definition</label>
+  <textarea id="fcIn" style="min-height:150px" placeholder="graph TD&#10;A[Start] --> B{Approved?}&#10;B -->|Yes| C[Process]&#10;B -->|No| D[Return to requestor]"></textarea>
+  <button class="btn" onclick="fcRun()">🔀 Render</button>
+  <button class="btn ghost" onclick="fcPng()">⬇ Download PNG</button>
+  <div id="fcOut" style="display:none;background:#fff;border-radius:14px;padding:18px;margin-top:14px;overflow:auto;text-align:center"></div>`,
+
+/* ── IMAGE TOOL ── */
+imgtool:()=>`
+  ${HOW([
+   'Choose one or more photos (JPG/PNG).',
+   'Set the maximum width (the image shrinks to fit, never enlarges), pick quality and format, then <b>Compress</b>.',
+   'One file downloads directly; multiple files download as a zip. Before/after sizes are listed.',
+  ])}
+  <label>Images</label>
+  <input type="file" id="imFiles" accept="image/*" multiple>
+  <div class="row">
+    <div><label>Max width (px)</label>
+      <select id="imW"><option value="800">800 — email</option><option value="1280">1280 — web</option><option value="1920" selected>1920 — full HD</option><option value="99999">Original size (compress only)</option></select></div>
+    <div><label>Quality</label>
+      <select id="imQ"><option value="0.6">Smaller file</option><option value="0.75" selected>Balanced</option><option value="0.9">High quality</option></select></div>
+    <div><label>Format</label>
+      <select id="imF"><option value="image/jpeg" selected>JPG</option><option value="image/webp">WebP (smallest)</option><option value="image/png">PNG</option></select></div>
+  </div>
+  <button class="btn" onclick="imRun()">🖼 Compress & Download</button>
+  <div class="out" id="imOut" style="display:none"></div>`,
+
+/* ── UNIT CONVERTER ── */
+unitconv:()=>`
+  ${HOW([
+   'Pick a category, then the from/to units — the result updates as you type.',
+   'Example: Length → 25, mm → inch = 0.9843.',
+  ])}
+  <div class="row">
+    <div><label>Category</label><select id="ucCat" onchange="ucFill()"></select></div>
+    <div><label>From</label><select id="ucFrom" onchange="ucGo()"></select></div>
+    <div><label>To</label><select id="ucTo" onchange="ucGo()"></select></div>
+  </div>
+  <label>Value</label>
+  <input type="number" id="ucVal" step="any" placeholder="1" oninput="ucGo()">
+  <div class="big-result" id="ucOut" style="display:none"></div>`,
+
+/* ── PERCENTAGE ── */
+pctcalc:()=>`
+  ${HOW([
+   'Three classic computations — fill either pair of boxes and the answer shows instantly.',
+   'Examples: 12% of 4,500 = 540 · 45 of 60 = 75% · from 200 to 250 = +25%.',
+  ])}
+  <h3 style="margin:6px 0 4px">What is X% of Y?</h3>
+  <div class="row">
+    <div><label>X %</label><input type="number" id="p1x" step="any" oninput="pcGo()"></div>
+    <div><label>of Y</label><input type="number" id="p1y" step="any" oninput="pcGo()"></div>
+    <div><label>Answer</label><div class="fn-out" id="p1o" style="margin-top:0;padding:9px">—</div></div>
+  </div>
+  <h3 style="margin:16px 0 4px">X is what % of Y?</h3>
+  <div class="row">
+    <div><label>X</label><input type="number" id="p2x" step="any" oninput="pcGo()"></div>
+    <div><label>Y</label><input type="number" id="p2y" step="any" oninput="pcGo()"></div>
+    <div><label>Answer</label><div class="fn-out" id="p2o" style="margin-top:0;padding:9px">—</div></div>
+  </div>
+  <h3 style="margin:16px 0 4px">% change from X to Y</h3>
+  <div class="row">
+    <div><label>From X</label><input type="number" id="p3x" step="any" oninput="pcGo()"></div>
+    <div><label>To Y</label><input type="number" id="p3y" step="any" oninput="pcGo()"></div>
+    <div><label>Answer</label><div class="fn-out" id="p3o" style="margin-top:0;padding:9px">—</div></div>
+  </div>`,
+
+/* ── AMOUNT IN WORDS ── */
+pesowords:()=>`
+  ${HOW([
+   'Type the amount and pick the currency — the spelled-out words appear instantly, check-writing style.',
+   'Example: 12,345.60 → Twelve Thousand Three Hundred Forty-Five Pesos and 60/100 Only.',
+   'Click the result to copy it.',
+  ])}
+  <div class="row">
+    <div><label>Amount</label><input type="number" id="pwAmt" step="0.01" placeholder="12345.60" oninput="pwGo()"></div>
+    <div><label>Currency</label>
+      <select id="pwCur" onchange="pwGo()"><option>Pesos</option><option>Dollars</option><option>Euros</option></select></div>
+  </div>
+  <div class="fn-out" id="pwOut" style="display:none;font-family:inherit;font-size:17px" title="Click to copy" onclick="navigator.clipboard.writeText(this.textContent).then(()=>alert('Copied!'))"></div>`,
+
+/* ── ORG CHART ── */
+orgchart:()=>`
+  ${HOW([
+   'One person per line: <b>Name, Role, Reports To</b>. Leave Reports To blank for the top person.',
+   'Click <b>Build Chart</b> to see the tree, then <b>Print</b> for a clean copy with your company header.',
+  ],'sampleOg()')}
+  <label>Header / company name (remembered)</label>
+  <input type="text" id="ogOrg" value="${esc(localStorage.getItem('orgName')||'')}">
+  <label>People — Name, Role, Reports To</label>
+  <textarea id="ogIn" style="min-height:140px" placeholder="Alex Cruz, General Manager,&#10;Bea Santos, Operations Head, Alex Cruz&#10;Carl Reyes, Technician, Bea Santos"></textarea>
+  <button class="btn" onclick="ogRun()">🌳 Build Chart</button>
+  <button class="btn ghost" onclick="ogPrint()">🖨 Print</button>
+  <div class="out" id="ogOut" style="display:none"></div>`,
 };
 
 /* ═══ SAMPLE LOADERS ═══ */
@@ -1649,13 +1782,13 @@ function sampleChart(){ set('chIn','Accounting, 120\nHSE, 80\nServices, 200\nAdm
 function sampleHours(){
   set('hcIn','8:00\n6:00\n695:30\n1:00\n32:00\n12:00\n24:00\n9:00\n396:00\n16:00');
   const data=[['Employee','Hours'],
-    ['Abagon, Joemar T','1416:30'],['Abagon, Joemar T','2000:00'],
-    ['Abanes, Raymart A','2120:00'],
-    ['ABAY, KYLE REISTER','88:00'],
-    ['Adan, Irish','1057:00'],
-    ['Aguila, Liezel A','2120:00'],
-    ['Abagon, Joemar T','0:00'],
-    ['Adan, Irish','0:00']];
+    ['Employee A','1416:30'],['Employee A','2000:00'],
+    ['Employee B','2120:00'],
+    ['Employee C','88:00'],
+    ['Employee D','1057:00'],
+    ['Employee E','2120:00'],
+    ['Employee A','0:00'],
+    ['Employee D','0:00']];
   HCWB=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(HCWB,XLSX.utils.aoa_to_sheet(data),'Punches');
   HCWB._fname='sample_punches.xlsx';
@@ -3375,6 +3508,227 @@ function dcExport(){
   csvDl(['Date','Decision','Owner','Notes'],d.map(r=>[r.t,r.dec,r.own,r.notes]),'decision_log_'+today()+'.csv');
 }
 function dcClear(){ if(confirm('Clear the decision log? Export first if needed.')){ localSave('decLog',[]); dcRender(); } }
+
+/* ═══ OCR ═══ */
+let OCRBUSY=false;
+async function ocrRun(){
+  const f=document.getElementById('ocFile').files[0];
+  if(!f){ alert('Choose an image or PDF first.'); return; }
+  if(OCRBUSY) return;
+  OCRBUSY=true;
+  const lang=document.getElementById('ocLang').value;
+  const st=document.getElementById('ocStatus'), out=document.getElementById('ocOut');
+  out.value=''; st.textContent='Loading OCR engine — first run downloads ~15 MB, wait a moment…';
+  try{
+    const worker=await Tesseract.createWorker(lang,1,{logger:m=>{
+      if(m.status==='recognizing text') st.textContent='Reading… '+Math.round(m.progress*100)+'%';
+    }});
+    const texts=[];
+    if(/\.pdf$/i.test(f.name)){
+      const doc=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;
+      const n=Math.min(doc.numPages,10);
+      for(let p=1;p<=n;p++){
+        st.textContent=`Page ${p} of ${n}…`;
+        const page=await doc.getPage(p);
+        const vp=page.getViewport({scale:2});
+        const c=document.createElement('canvas'); c.width=vp.width; c.height=vp.height;
+        await page.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;
+        const {data}=await worker.recognize(c);
+        texts.push('--- Page '+p+' ---\n'+data.text.trim());
+      }
+      if(doc.numPages>10) texts.push('(Only the first 10 pages were processed)');
+    } else {
+      const {data}=await worker.recognize(f);
+      texts.push(data.text.trim());
+    }
+    await worker.terminate();
+    out.value=texts.join('\n\n');
+    st.textContent='✅ Done — '+out.value.length+' characters extracted. Review and fix any misreads.';
+  }catch(err){ st.textContent='⚠ OCR failed: '+(err.message||err); }
+  OCRBUSY=false;
+}
+function ocrTxt(){
+  const v=document.getElementById('ocOut').value;
+  if(!v){ alert('Nothing to download yet.'); return; }
+  dlBlob(v,'ocr_text_'+today()+'.txt','text/plain');
+}
+
+/* ═══ FLOWCHART ═══ */
+if(window.mermaid) mermaid.initialize({startOnLoad:false,securityLevel:'loose'});
+async function fcRun(){
+  const code=document.getElementById('fcIn').value.trim();
+  if(!code){ alert('Type the flowchart definition first.'); return; }
+  try{
+    const {svg}=await mermaid.render('fcsvg'+Date.now(),code);
+    const d=document.getElementById('fcOut'); d.style.display='block'; d.innerHTML=svg;
+  }catch(err){ alert('Diagram error — check the syntax. '+(err.message||'')); }
+}
+function fcPng(){
+  const svgEl=document.querySelector('#fcOut svg');
+  if(!svgEl){ alert('Render the chart first.'); return; }
+  const vb=svgEl.viewBox&&svgEl.viewBox.baseVal;
+  const w=(vb&&vb.width)||svgEl.getBoundingClientRect().width||800;
+  const h=(vb&&vb.height)||svgEl.getBoundingClientRect().height||600;
+  const xml=new XMLSerializer().serializeToString(svgEl);
+  const img=new Image();
+  img.onload=()=>{
+    const c=document.createElement('canvas'); c.width=w*2; c.height=h*2;
+    const x=c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,c.width,c.height);
+    x.drawImage(img,0,0,c.width,c.height);
+    const a=document.createElement('a'); a.href=c.toDataURL('image/png');
+    a.download='flowchart_'+today()+'.png'; a.click();
+  };
+  img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(xml);
+}
+function sampleFc(){ set('fcIn','graph TD\nA[Request received] --> B{Complete documents?}\nB -->|Yes| C[Process request]\nB -->|No| D[Return to requestor]\nC --> E[Approval]\nE --> F[Done]'); }
+
+/* ═══ IMAGE COMPRESSOR ═══ */
+async function imRun(){
+  const files=[...document.getElementById('imFiles').files];
+  if(!files.length){ alert('Choose image files first.'); return; }
+  const maxW=parseInt(document.getElementById('imW').value);
+  const q=parseFloat(document.getElementById('imQ').value);
+  const fmt=document.getElementById('imF').value;
+  const ext=fmt==='image/png'?'.png':fmt==='image/webp'?'.webp':'.jpg';
+  const zip=files.length>1?new JSZip():null;
+  let rows='';
+  for(const f of files){
+    try{
+      const bm=await createImageBitmap(f);
+      const s=Math.min(1,maxW/bm.width);
+      const c=document.createElement('canvas');
+      c.width=Math.round(bm.width*s); c.height=Math.round(bm.height*s);
+      const x=c.getContext('2d');
+      if(fmt!=='image/png'){ x.fillStyle='#fff'; x.fillRect(0,0,c.width,c.height); }
+      x.drawImage(bm,0,0,c.width,c.height);
+      const blob=await new Promise(res=>c.toBlob(res,fmt,q));
+      const name=f.name.replace(/\.[^.]+$/,'')+ext;
+      if(zip) zip.file(name,blob);
+      else { const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click(); }
+      const pct=(100-blob.size/f.size*100).toFixed(0);
+      rows+=`<tr><td>${esc(f.name)}</td><td>${fmtSize(f.size)}</td><td>${fmtSize(blob.size)}</td><td>${c.width}×${c.height}</td><td class="${blob.size<f.size?'ok-note':''}">${blob.size<f.size?'−'+pct+'%':'no gain'}</td></tr>`;
+    }catch(err){ rows+=`<tr><td>${esc(f.name)}</td><td colspan="4" style="color:var(--red)">${esc(err.message||'unsupported image')}</td></tr>`; }
+  }
+  if(zip){
+    const blob=await zip.generateAsync({type:'blob'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+    a.download='images_compressed_'+today()+'.zip'; a.click();
+  }
+  const o=document.getElementById('imOut'); o.style.display='block';
+  o.innerHTML='<table><tr><th>File</th><th>Before</th><th>After</th><th>Size</th><th>Saved</th></tr>'+rows+'</table>';
+}
+
+/* ═══ UNIT CONVERTER ═══ */
+const UNITS={
+  Length:{m:1,cm:0.01,mm:0.001,km:1000,inch:0.0254,ft:0.3048,yd:0.9144,mile:1609.344},
+  Weight:{kg:1,g:0.001,lb:0.45359237,oz:0.028349523,'metric ton':1000},
+  Temperature:{'°C':1,'°F':1,'K':1},
+  Volume:{L:1,mL:0.001,'gal (US)':3.785411784,'cup (US)':0.2365882365,'fl oz (US)':0.0295735296},
+  Area:{'sq m':1,'sq ft':0.09290304,'sq km':1000000,hectare:10000,acre:4046.8564224}
+};
+function ucFill(){
+  const catSel=document.getElementById('ucCat'); if(!catSel) return;
+  if(!catSel.options.length) catSel.innerHTML=Object.keys(UNITS).map(k=>`<option>${k}</option>`).join('');
+  const u=Object.keys(UNITS[catSel.value]);
+  document.getElementById('ucFrom').innerHTML=u.map(x=>`<option>${x}</option>`).join('');
+  document.getElementById('ucTo').innerHTML=u.map(x=>`<option>${x}</option>`).join('');
+  document.getElementById('ucTo').selectedIndex=Math.min(1,u.length-1);
+  ucGo();
+}
+function ucGo(){
+  const cat=document.getElementById('ucCat').value;
+  const v=parseFloat(document.getElementById('ucVal').value);
+  const o=document.getElementById('ucOut');
+  if(isNaN(v)){ o.style.display='none'; return; }
+  const f=document.getElementById('ucFrom').value,t=document.getElementById('ucTo').value;
+  let r;
+  if(cat==='Temperature'){
+    const c=f==='°C'?v:f==='°F'?(v-32)*5/9:v-273.15;
+    r=t==='°C'?c:t==='°F'?c*9/5+32:c+273.15;
+  } else r=v*UNITS[cat][f]/UNITS[cat][t];
+  o.style.display='block';
+  o.textContent=v+' '+f+' = '+(+r.toFixed(6)).toLocaleString('en-US',{maximumFractionDigits:6})+' '+t;
+}
+
+/* ═══ PERCENTAGE ═══ */
+function pcGo(){
+  const g=id=>parseFloat(document.getElementById(id).value);
+  const s=(id,v)=>document.getElementById(id).textContent=v;
+  const x1=g('p1x'),y1=g('p1y');
+  s('p1o',(!isNaN(x1)&&!isNaN(y1))?(+(x1/100*y1).toFixed(4)).toLocaleString():'—');
+  const x2=g('p2x'),y2=g('p2y');
+  s('p2o',(!isNaN(x2)&&!isNaN(y2)&&y2!==0)?(+(x2/y2*100).toFixed(2))+'%':'—');
+  const x3=g('p3x'),y3=g('p3y');
+  s('p3o',(!isNaN(x3)&&!isNaN(y3)&&x3!==0)?((y3>=x3?'+':'')+(+((y3-x3)/x3*100).toFixed(2))+'%'):'—');
+}
+
+/* ═══ AMOUNT IN WORDS ═══ */
+function n2w(n){
+  const ones=['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+  const tens=['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+  function h(x){
+    let s='';
+    if(x>=100){ s+=ones[Math.floor(x/100)]+' Hundred'; x%=100; if(x) s+=' '; }
+    if(x>=20){ s+=tens[Math.floor(x/10)]; if(x%10) s+='-'+ones[x%10]; }
+    else if(x>0) s+=ones[x];
+    return s;
+  }
+  if(n===0) return 'Zero';
+  const grp=[[1000000000,'Billion'],[1000000,'Million'],[1000,'Thousand'],[1,'']];
+  const out=[];
+  for(const [v,name] of grp){
+    if(n>=v){ const q=Math.floor(n/v); n%=v; out.push(h(q)+(name?' '+name:'')); }
+  }
+  return out.join(' ');
+}
+function pwGo(){
+  const a=parseFloat(document.getElementById('pwAmt').value);
+  const o=document.getElementById('pwOut');
+  if(isNaN(a)||a<0||a>999999999999){ o.style.display='none'; return; }
+  const cur=document.getElementById('pwCur').value;
+  const int=Math.floor(a), cents=Math.round((a-int)*100);
+  o.style.display='block';
+  o.textContent=n2w(int)+' '+cur+(cents?' and '+String(cents).padStart(2,'0')+'/100':'')+' Only';
+}
+
+/* ═══ ORG CHART ═══ */
+function ogParse(){
+  const nodes=[],map={};
+  splitLines('ogIn').forEach(l=>{
+    const p=l.split(',').map(s=>s.trim());
+    if(!p[0]) return;
+    const n={name:p[0],role:p[1]||'',boss:(p[2]||'').toLowerCase(),kids:[]};
+    nodes.push(n); map[n.name.toLowerCase()]=n;
+  });
+  const roots=[];
+  nodes.forEach(n=>{
+    const b=map[n.boss];
+    if(b&&b!==n) b.kids.push(n); else roots.push(n);
+  });
+  return roots;
+}
+function ogHtml(n){
+  return `<div style="margin:7px 0"><div style="display:inline-block;border:1.5px solid #185FA5;border-radius:10px;padding:7px 14px;background:rgba(24,95,165,.07)"><b>${esc(n.name)}</b>${n.role?`<div style="font-size:11.5px;opacity:.75">${esc(n.role)}</div>`:''}</div>`+
+    (n.kids.length?`<div style="margin-left:34px;border-left:2px solid #85B7EB;padding-left:16px">${n.kids.map(ogHtml).join('')}</div>`:'')+'</div>';
+}
+function ogRun(){
+  const roots=ogParse();
+  if(!roots.length){ alert('Add at least one person.'); return; }
+  const o=document.getElementById('ogOut'); o.style.display='block';
+  o.innerHTML=roots.map(ogHtml).join('');
+}
+function ogPrint(){
+  const roots=ogParse();
+  if(!roots.length){ alert('Add at least one person.'); return; }
+  document.getElementById('printArea').innerHTML=`
+   <div style="font-family:Arial,sans-serif;max-width:720px;margin:30px auto;padding:20px">
+    <div style="border-bottom:3px solid #0c447c;padding-bottom:10px;margin-bottom:18px">
+      <h1 style="font-size:20px;letter-spacing:2px">ORGANIZATION CHART</h1>
+      <div style="font-size:12px;color:#555">${esc(orgVal('ogOrg'))} · as of ${today()}</div></div>
+    ${roots.map(ogHtml).join('')}</div>`;
+  window.print();
+}
+function sampleOg(){ set('ogIn','Alex Cruz, General Manager,\nBea Santos, Operations Head, Alex Cruz\nCarl Reyes, Senior Technician, Bea Santos\nDina Lopez, Technician, Carl Reyes\nEli Tan, Admin Officer, Alex Cruz\nFe Ramos, HR Officer, Eli Tan'); }
 
 /* ═══ CSV → XLSX ═══ */
 function csvGetRows(){

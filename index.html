@@ -52,6 +52,10 @@ nav small{display:block;font-size:11px;color:var(--muted)}
   border:1px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;
   font-size:13px;font-weight:600;transition:.25s;font-family:inherit}
 .theme-btn:hover{border-color:var(--sky);box-shadow:0 0 0 4px var(--glow)}
+.learn-btn{display:flex;align-items:center;gap:8px;padding:9px 16px;border-radius:99px;
+  border:none;background:var(--hero-grad);color:#fff;cursor:pointer;text-decoration:none;
+  font-size:13px;font-weight:700;transition:.25s;font-family:inherit;box-shadow:0 6px 16px var(--glow)}
+.learn-btn:hover{filter:brightness(1.08);transform:translateY(-1px)}
 header{position:relative;z-index:1;text-align:center;padding:20px;
   min-height:calc(100vh - 63px);display:flex;flex-direction:column;align-items:center;justify-content:center}
 .scroll-cue{margin-top:34px;font-size:13px;font-weight:700;color:var(--sky-d);cursor:pointer;
@@ -241,6 +245,7 @@ footer{text-align:center;color:var(--muted);font-size:12.5px;padding:34px 20px 5
 <nav>
   <div class="nav-logo">R3U</div>
   <div class="nav-sp"></div>
+  <a class="learn-btn" href="R3U_Toolbox_Presentation.html" target="_blank" rel="noopener">📊 Learn More</a>
   <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">🌙 Dark</button>
 </nav>
 

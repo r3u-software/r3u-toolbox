@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>R3U Toolbox — Proposal for Company-Wide Rollout</title>
+<style>
+:root{
+  --blue-900:#07203a;
+  --blue-800:#0b3d66;
+  --blue-700:#125088;
+  --blue-500:#2f8fd1;
+  --blue-400:#4fa8e6;
+  --sky-300:#8fd0f0;
+  --sky-100:#eaf6fd;
+  --sky-50:#f5fbff;
+  --white:#ffffff;
+  --ink:#0e2a3f;
+  --muted:#5b7286;
+  --card:#ffffff;
+  --line:#dced5f8;
+  --shadow:0 14px 34px rgba(11,61,102,.14);
+  --shadow-lg:0 24px 60px rgba(11,61,102,.22);
+  --radius:20px;
+  --radius-sm:12px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;height:100%;}
+body{
+  font-family:'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+  color:var(--ink);
+  background:var(--blue-900);
+  overflow:hidden;
+}
+.deck{
+  display:flex;
+  height:100vh;
+  width:100vw;
+  overflow-x:auto;
+  overflow-y:hidden;
+  scroll-snap-type:x mandatory;
+  scroll-behavior:smooth;
+}
+.slide{
+  flex:0 0 100vw;
+  height:100vh;
+  scroll-snap-align:start;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  padding:min(6vh,60px) min(7vw,90px);
+  background:linear-gradient(160deg,var(--sky-50) 0%,var(--sky-100) 60%,#e4f2fb 100%);
+  position:relative;
+}
+.slide.dark{
+  background:radial-gradient(1200px 700px at 20% -10%,#0f4c82 0%,var(--blue-900) 55%,#051324 100%);
+  color:#eaf6ff;
+}
+.slide.dark .muted{color:#a8c8e0;}
+.slide-inner{width:100%;max-width:1180px;}
+.kicker{
+  display:inline-block;
+  font-size:13px;
+  font-weight:700;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  color:var(--blue-500);
+  background:rgba(47,143,209,.1);
+  padding:6px 14px;
+  border-radius:999px;
+  margin-bottom:18px;
+}
+.slide.dark .kicker{color:#9fd7ff;background:rgba(159,215,255,.12);}
+h1{font-size:clamp(34px,5.2vw,64px);line-height:1.05;margin:0 0 14px;font-weight:800;letter-spacing:-1px;}
+h2{font-size:clamp(26px,3.4vw,42px);line-height:1.1;margin:0 0 8px;font-weight:800;letter-spacing:-.5px;color:var(--blue-800);}
+.slide.dark h2{color:#fff;}
+.lead{font-size:clamp(16px,1.6vw,20px);color:var(--muted);max-width:800px;margin:0 0 10px;font-weight:500;}
+.muted{color:var(--muted);}
+.eyebrow-sub{font-size:14px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--blue-500);margin-bottom:6px;display:block;}
+
+.grid-cards{display:grid;gap:18px;margin-top:28px;width:100%;}
+.cols-2{grid-template-columns:repeat(2,1fr);}
+.cols-3{grid-template-columns:repeat(3,1fr);}
+.cols-4{grid-template-columns:repeat(4,1fr);}
+
+.card{
+  background:var(--card);
+  border-radius:var(--radius);
+  padding:22px 22px 20px;
+  box-shadow:var(--shadow);
+  border:1px solid rgba(11,61,102,.06);
+}
+.card .icon{font-size:30px;margin-bottom:10px;display:block;}
+.card h3{margin:0 0 6px;font-size:17px;font-weight:800;color:var(--blue-800);}
+.card p{margin:0;font-size:14px;color:var(--muted);line-height:1.5;}
+.example{
+  margin-top:12px;
+  background:var(--sky-100);
+  border-left:4px solid var(--blue-500);
+  border-radius:10px;
+  padding:9px 12px;
+  font-size:13px;
+  color:var(--blue-800);
+  font-weight:600;
+  line-height:1.5;
+}
+.example b{color:var(--blue-500);}
+
+/* ===== Tool mockup component library (mirrors the webtool's own UI) ===== */
+.tcard{background:var(--card);border-radius:var(--radius);padding:18px 18px 16px;box-shadow:var(--shadow);border:1px solid rgba(11,61,102,.06);}
+.tcard-head{display:flex;align-items:center;gap:11px;margin-bottom:11px;}
+.tcard-head .icon{font-size:23px;flex:none;width:40px;height:40px;border-radius:11px;background:var(--sky-100);display:flex;align-items:center;justify-content:center;}
+.tcard-head h3{margin:0;font-size:15.5px;font-weight:800;color:var(--blue-800);}
+.tcard-head p{margin:1px 0 0;font-size:11.5px;color:var(--muted);}
+
+.mock{background:linear-gradient(180deg,#fbfeff,var(--sky-100));border:1px solid rgba(47,143,209,.18);border-radius:13px;padding:12px 13px 11px;position:relative;}
+.mock-tag{position:absolute;top:-9px;right:10px;font-size:8px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--blue-500);background:#fff;padding:2px 8px;border-radius:999px;box-shadow:0 2px 5px rgba(11,61,102,.15);}
+
+.mfiles{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.mfile{background:#fff;border:1px solid #d8e9f5;border-radius:8px;padding:6px 9px;font-size:10px;font-weight:700;color:var(--blue-800);box-shadow:0 2px 6px rgba(11,61,102,.08);white-space:nowrap;}
+.mfile.result{background:var(--blue-700);color:#fff;border-color:var(--blue-700);}
+.marrow{color:var(--blue-500);font-weight:900;font-size:15px;}
+
+.mtable{width:100%;border-collapse:collapse;font-size:10px;background:#fff;border-radius:6px;overflow:hidden;}
+.mtable th{background:var(--blue-800);color:#fff;padding:4px 7px;text-align:left;font-weight:700;font-size:9px;}
+.mtable td{padding:4px 7px;border-bottom:1px solid #eaf2f8;color:var(--ink);}
+.mtable tr:last-child td{border-bottom:none;}
+.mtable tr.hl td{background:#fff6d8;font-weight:800;}
+.mtable tr.bad td{background:#fdeae6;}
+.mtable tr.good td{background:#e3f7e9;}
+.mtable td.good{background:#e3f7e9;color:#1f8a4c;font-weight:800;}
+.mtable td.bad{background:#fdeae6;color:#b6402b;font-weight:800;}
+
+.mbadge{display:inline-flex;align-items:center;gap:4px;font-size:9.5px;font-weight:800;padding:3px 8px;border-radius:999px;}
+.mbadge.good{background:#e3f7e9;color:#1f8a4c;}
+.mbadge.bad{background:#fdeae6;color:#b6402b;}
+.mbadge.warn{background:#fff6d8;color:#9a7300;}
+
+.mdoc{background:#fff;border-radius:8px;padding:9px 11px;}
+.mdoc .mline{height:5px;background:#e2eef7;border-radius:3px;margin-bottom:5px;}
+.mdoc .mline.w100{width:100%;} .mdoc .mline.w80{width:80%;} .mdoc .mline.w60{width:60%;} .mdoc .mline.w40{width:40%;}
+.mdoc .msign{margin-top:7px;border-top:1px dashed #c7dced;padding-top:5px;font-size:9.5px;color:var(--muted);font-weight:700;}
+
+.mstack{position:relative;height:56px;margin-bottom:2px;}
+.mcert{position:absolute;width:64px;height:46px;background:#fff;border:1px solid #d8e9f5;border-radius:6px;box-shadow:0 3px 8px rgba(11,61,102,.14);display:flex;align-items:center;justify-content:center;font-size:16px;}
+
+.mbars{display:flex;align-items:flex-end;gap:8px;height:60px;}
+.mbarcol{flex:1;background:linear-gradient(180deg,var(--blue-400),var(--blue-700));border-radius:5px 5px 2px 2px;position:relative;min-height:14px;}
+.mbarcol .mv{position:absolute;top:-15px;left:0;right:0;text-align:center;font-size:8.5px;font-weight:800;color:var(--blue-800);white-space:nowrap;}
+
+.mgauge-bar{background:#e2eef7;border-radius:999px;height:8px;overflow:hidden;}
+.mgauge-fill{height:100%;background:linear-gradient(90deg,var(--blue-400),var(--blue-700));border-radius:999px;}
+
+.mqr{width:40px;height:40px;flex:none;border-radius:8px;background:
+  linear-gradient(90deg,#0e2a3f 50%,transparent 50%),
+  linear-gradient(90deg,#0e2a3f 50%,transparent 50%),
+  linear-gradient(#0e2a3f 50%,transparent 50%),
+  linear-gradient(#0e2a3f 50%,transparent 50%);
+  background-size:8px 8px;background-position:0 0,4px 12px,0 4px,12px 0;background-color:#fff;background-repeat:repeat;}
+
+.support-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px;}
+.mini-chip{background:var(--card);border-radius:14px;padding:11px 13px;box-shadow:var(--shadow);display:flex;align-items:center;gap:11px;}
+.mini-chip .micon{font-size:19px;flex:none;width:36px;height:36px;border-radius:10px;background:var(--sky-100);display:flex;align-items:center;justify-content:center;}
+.mini-chip h4{margin:0;font-size:12px;font-weight:800;color:var(--blue-800);}
+.mini-chip .mres{margin-top:2px;font-size:10.5px;font-weight:700;color:var(--blue-500);}
+.mini-chip .mres b{color:var(--blue-700);}
+.mini-chip .flag{display:inline-block;font-weight:800;padding:1px 7px;border-radius:6px;font-size:9.5px;margin-left:2px;background:#fdeae6;color:#b6402b;}
+.mini-chip .flag.good{background:#e3f7e9;color:#1f8a4c;}
+
+.stat-row{display:flex;gap:20px;flex-wrap:wrap;margin-top:26px;width:100%;}
+.stat{
+  flex:1;min-width:190px;
+  background:var(--card);
+  border-radius:var(--radius);
+  padding:24px 20px;
+  text-align:center;
+  box-shadow:var(--shadow);
+}
+.stat .num{font-size:44px;font-weight:800;color:var(--blue-700);letter-spacing:-1px;}
+.stat .label{font-size:13px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-top:4px;}
+
+.pillbar{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;}
+.pill{background:rgba(47,143,209,.12);color:var(--blue-700);font-weight:700;font-size:13px;padding:7px 14px;border-radius:999px;}
+.slide.dark .pill{background:rgba(255,255,255,.12);color:#eaf6ff;}
+
+.steps{display:flex;gap:0;margin-top:30px;width:100%;align-items:stretch;}
+.step{flex:1;background:var(--card);border-radius:var(--radius);padding:26px 20px;text-align:center;box-shadow:var(--shadow);position:relative;}
+.step .stepnum{width:38px;height:38px;border-radius:50%;background:var(--blue-500);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:16px;}
+.step h3{margin:0 0 6px;font-size:16px;color:var(--blue-800);font-weight:800;}
+.step p{margin:0;font-size:13.5px;color:var(--muted);}
+.step-arrow{display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--sky-300);padding:0 12px;font-weight:900;}
+
+.bars{display:flex;align-items:flex-end;gap:10px;height:170px;margin-top:26px;width:100%;}
+.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;}
+.bar{width:100%;border-radius:8px 8px 3px 3px;background:linear-gradient(180deg,var(--blue-400),var(--blue-700));}
+.bar-label{font-size:10.5px;color:var(--muted);margin-top:6px;text-align:center;font-weight:700;line-height:1.2;}
+.bar-val{font-size:12px;font-weight:800;color:var(--blue-800);margin-bottom:4px;}
+
+.twocol{display:grid;grid-template-columns:1.05fr .95fr;gap:40px;width:100%;align-items:center;}
+.checklist{list-style:none;margin:20px 0 0;padding:0;}
+.checklist li{display:flex;gap:12px;align-items:flex-start;margin-bottom:14px;font-size:15px;line-height:1.5;}
+.checklist li .tick{flex:none;width:24px;height:24px;border-radius:50%;background:var(--blue-500);color:#fff;font-size:13px;display:flex;align-items:center;justify-content:center;font-weight:800;margin-top:1px;}
+.slide.dark .checklist li .tick{background:#4fa8e6;}
+
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:26px;width:100%;}
+.compare .box{border-radius:var(--radius);padding:22px;box-shadow:var(--shadow);}
+.compare .bad{background:#fff4f2;border:1px solid #f6c9c0;}
+.compare .good{background:#eefaf1;border:1px solid #bfe8c9;}
+.compare h3{margin:0 0 12px;font-size:16px;font-weight:800;}
+.compare .bad h3{color:#b6402b;}
+.compare .good h3{color:#1f8a4c;}
+.compare ul{margin:0;padding-left:18px;font-size:13.5px;line-height:1.7;color:var(--ink);}
+
+.note-box{margin-top:22px;background:rgba(255,255,255,.5);border:1px dashed var(--blue-400);border-radius:12px;padding:14px 18px;font-size:13px;color:var(--blue-800);max-width:760px;}
+.slide.dark .note-box{background:rgba(255,255,255,.06);border-color:#4fa8e6;color:#cfe9ff;}
+
+.cta-row{display:flex;gap:16px;margin-top:32px;flex-wrap:wrap;}
+.cta-btn{background:var(--blue-500);color:#fff;border:none;padding:16px 30px;border-radius:14px;font-size:16px;font-weight:800;box-shadow:0 10px 26px rgba(47,143,209,.4);}
+.cta-ghost{background:rgba(255,255,255,.08);color:#fff;border:1.5px solid rgba(255,255,255,.5);padding:16px 30px;border-radius:14px;font-size:16px;font-weight:700;}
+
+.deptTag{display:inline-flex;align-items:center;gap:8px;background:var(--blue-800);color:#fff;font-weight:800;font-size:13px;padding:8px 16px;border-radius:999px;margin-bottom:16px;}
+
+/* Nav */
+.navbar{
+  position:fixed;left:50%;bottom:22px;transform:translateX(-50%);
+  display:flex;align-items:center;gap:14px;
+  background:rgba(7,32,58,.85);
+  backdrop-filter:blur(6px);
+  padding:10px 16px;border-radius:999px;
+  box-shadow:0 10px 30px rgba(0,0,0,.35);
+  z-index:50;
+}
+.navbar button{
+  background:rgba(255,255,255,.12);border:none;color:#fff;width:34px;height:34px;border-radius:50%;
+  font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+}
+.navbar button:hover{background:rgba(255,255,255,.25);}
+.dots{display:flex;gap:6px;}
+.dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.3);cursor:pointer;transition:.2s;}
+.dot.active{background:#4fa8e6;width:22px;border-radius:5px;}
+.counter{color:#cfe9ff;font-size:12px;font-weight:700;min-width:44px;text-align:center;}
+.hint{position:fixed;top:18px;right:24px;font-size:12px;color:#cfe9ff;background:rgba(7,32,58,.6);padding:7px 12px;border-radius:999px;z-index:50;}
+
+.logo-mark{font-size:15px;font-weight:900;letter-spacing:1px;color:var(--blue-700);position:absolute;top:26px;left:min(7vw,90px);}
+.slide.dark .logo-mark{color:#9fd7ff;}
+.page-idx{position:absolute;top:28px;right:min(7vw,90px);font-size:12px;color:var(--muted);font-weight:700;}
+.slide.dark .page-idx{color:#a8c8e0;}
+
+@media print{
+  body{overflow:visible;background:#fff;}
+  .deck{display:block;height:auto;overflow:visible;}
+  .slide{
+    scroll-snap-align:none;
+    height:100vh;
+    page-break-after:always;
+    display:flex;
+  }
+  .navbar,.hint{display:none;}
+}
+@media (max-width:820px){
+  .cols-2,.cols-3,.cols-4{grid-template-columns:1fr;}
+  .compare{grid-template-columns:1fr;}
+  .twocol{grid-template-columns:1fr;}
+  .steps{flex-direction:column;}
+  .step-arrow{transform:rotate(90deg);padding:6px 0;}
+  .stat-row{flex-direction:column;}
+}
+</style>
+</head>
+<body>
+
+<div class="hint">← → arrow keys · F = fullscreen · Ctrl+P = print/export PDF</div>
+
+<div class="deck" id="deck">
+
+<!-- 1. TITLE -->
+<section class="slide dark">
+  <div class="slide-inner" style="text-align:center;display:flex;flex-direction:column;align-items:center;">
+    <div class="kicker">Internal Systems Proposal</div>
+    <h1 style="font-size:clamp(46px,8vw,90px)">🧰 R3U Toolbox</h1>
+    <p class="lead" style="color:#cfe9ff;max-width:640px;margin:0 auto 22px;font-size:19px;">
+      One unified, offline, browser-based workspace — built for every department, running on this one link.
+    </p>
+    <div class="pillbar" style="justify-content:center;">
+      <div class="pill">60 tools</div>
+      <div class="pill">15 departments</div>
+      <div class="pill">Ready to deploy</div>
+      <div class="pill">100% offline & private</div>
+    </div>
+    <div class="note-box" style="margin-top:40px;">Prepared by R3U · IT Department &nbsp;·&nbsp; Proposal for company-wide rollout</div>
+  </div>
+</section>
+
+<!-- 2. THE PROBLEM -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="logo-mark">R3U TOOLBOX</div>
+    <div class="page-idx">02 / 16</div>
+    <div class="kicker">The Problem</div>
+    <h2>Every department is patching the same gaps, alone.</h2>
+    <p class="lead">Before this project, day-to-day office work leaned on manual re-typing, personal Excel files, and public web tools that weren't built for company data.</p>
+    <div class="grid-cards cols-4">
+      <div class="card"><span class="icon">✍️</span><h3>Manual, repetitive work</h3><p>Timesheets, aging reports, and price lists retyped by hand every single cycle.</p></div>
+      <div class="card"><span class="icon">🐌</span><h3>Slow turnaround</h3><p>Merging a PDF or converting a timesheet means detouring through several different apps and manual steps.</p></div>
+      <div class="card"><span class="icon">📤</span><h3>Data leaves the PC</h3><p>Public online converters quietly upload payroll files, quotations, and HSE reports to unknown servers.</p></div>
+      <div class="card"><span class="icon">🧩</span><h3>No single system</h3><p>Every department reinvents its own memo, log, or tracker — no shared standard.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 3. PURPOSE -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="logo-mark">R3U TOOLBOX</div>
+    <div class="page-idx">03 / 16</div>
+    <div class="kicker">The Purpose</div>
+    <h2>Give every department one shared, private workspace — built around how we actually work.</h2>
+    <div class="grid-cards cols-3" style="margin-top:36px;">
+      <div class="card"><span class="icon">⚡</span><h3>Instant access</h3><p>No procurement cycle, no installation, no waiting on IT — open the link and start working.</p></div>
+      <div class="card"><span class="icon">🔒</span><h3>Private by design</h3><p>Runs entirely inside the browser tab. Files never leave the PC — nothing is uploaded, ever.</p></div>
+      <div class="card"><span class="icon">🏗️</span><h3>Built for us</h3><p>Every tool is shaped around a real internal form — COE, DR, PR, Incident Report, aging buckets, quotations.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 4. HOW IT WORKS -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="logo-mark">R3U TOOLBOX</div>
+    <div class="page-idx">04 / 16</div>
+    <div class="kicker">How It Works</div>
+    <h2>Open a link. Pick a tool. Nothing leaves the PC.</h2>
+    <div class="steps">
+      <div class="step"><div class="stepnum">1</div><h3>Open the link</h3><p>One URL, published on GitHub Pages. Works on any browser — desktop, tablet, or phone.</p></div>
+      <div class="step-arrow">→</div>
+      <div class="step"><div class="stepnum">2</div><h3>Pick your tool</h3><p>Filter by department, search by name, or star your favorites for one-click access next time.</p></div>
+      <div class="step-arrow">→</div>
+      <div class="step"><div class="stepnum">3</div><h3>Work happens locally</h3><p>Every calculation, conversion, and file runs on-device. Download the result — nothing is sent anywhere.</p></div>
+    </div>
+    <div class="note-box">No installation to schedule. No login to manage. Just open the link.</div>
+  </div>
+</section>
+
+<!-- 5. AT A GLANCE -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="logo-mark">R3U TOOLBOX</div>
+    <div class="page-idx">05 / 16</div>
+    <div class="kicker">At a Glance</div>
+    <h2>Coverage across the whole organization</h2>
+    <div class="stat-row">
+      <div class="stat"><div class="num">60</div><div class="label">Tools built</div></div>
+      <div class="stat"><div class="num">15</div><div class="label">Departments covered</div></div>
+      <div class="stat"><div class="num">57</div><div class="label">Live today</div></div>
+      <div class="stat"><div class="num">0</div><div class="label">Files ever uploaded</div></div>
+    </div>
+    <div class="bars" id="bars"></div>
+  </div>
+</section>
+
+<!-- 6. EVERYONE TOOLS -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="logo-mark">R3U TOOLBOX</div>
+    <div class="page-idx">06 / 16</div>
+    <div class="deptTag">🌐 Everyone — cross-department toolkit</div>
+    <h2 style="margin-top:0;">The tools every desk uses, every week</h2>
+    <div class="grid-cards cols-2">
+      <div class="tcard">
+        <div class="tcard-head"><span class="icon">📄</span><div><h3>PDF Toolkit</h3><p>Merge, split, rotate, compress, watermark, e-sign — all in one place.</p></div></div>
+        <div class="mock"><div class="mock-tag">Live preview</div>
+          <div class="mfiles">
+            <div class="mfile">📄 Supplier1.pdf</div>
+            <div class="mfile">📄 Supplier2.pdf</div>
+            <div class="mfile">📄 Supplier3.pdf</div>
+            <div class="marrow">→</div>
+            <div class="mfile result">📎 Merged.pdf · 9 pages</div>
+          </div>
+        </div>
+      </div>
+      <div class="tcard">
+        <div class="tcard-head"><span class="icon">👁️</span><div><h3>OCR — Photo/Scan to Text</h3><p>Turn a scanned page or phone photo into copy-paste text.</p></div></div>
+        <div class="mock" style="display:flex;gap:10px;align-items:center;"><div class="mock-tag">Live preview</div>
+          <div style="flex:none;width:56px;height:56px;background:#dfe9ee;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:24px;">🧾</div>
+          <div class="marrow">→</div>
+          <div style="flex:1;background:#fff;border-radius:8px;padding:8px 10px;font-family:monospace;font-size:9.5px;line-height:1.55;color:var(--ink);box-shadow:0 2px 6px rgba(11,61,102,.08);">
+            Delivery Receipt #0231<br>Qty: 12 units received<br><span style="color:var(--blue-500);font-weight:800;">✓ Text copied — no retyping</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="support-row">
+      <div class="mini-chip"><span class="micon">🧠</span><div><h4>Excel Report Builder</h4><div class="mres">Raw export → <b>totals + top items</b> + chart</div></div></div>
+      <div class="mini-chip"><span class="micon">📈</span><div><h4>Quick Charts</h4><div class="mres">Numbers pasted → <b>pie/bar/line PNG</b> in seconds</div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 7. ACCOUNTING & FINANCE -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="logo-mark">R3U TOOLBOX</div>
+    <div class="page-idx">07 / 16</div>
+    <div class="deptTag">🧾 Accounting AP/AR &nbsp;+&nbsp; 💵 Finance &amp; Payroll</div>
+    <h2 style="margin-top:0;">Numbers, computed correctly — every time</h2>
+    <div class="grid-cards cols-2">
+      <div class="tcard">
+        <div class="tcard-head"><span class="icon">🧵</span><div><h3>Spoolbox — Aging</h3><p>APS516 AP-aging spool converter with full reconciliation checks.</p></div></div>
+        <div class="mock"><div class="mock-tag">Live preview</div>
+          <div style="font-size:9.5px;font-weight:800;color:var(--blue-800);margin-bottom:6px;">AP Aging — ₱2.4M total</div>
+          <div style="display:flex;height:20px;border-radius:6px;overflow:hidden;box-shadow:0 2px 6px rgba(11,61,102,.08);">
+            <div style="width:40%;background:#8fd0f0;"></div>
+            <div style="width:28%;background:#4fa8e6;"></div>
+            <div style="width:20%;background:#2f8fd1;"></div>
+            <div style="width:12%;background:#b6402b;"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:8.5px;color:var(--muted);margin-top:4px;font-weight:700;">
+            <span>0–30</span><span>31–60</span><span>61–90</span><span style="color:#b6402b;">90+ ⚠</span>
+          </div>
+        </div>
+      </div>
+      <div class="tcard">
+        <div class="tcard-head"><span class="icon">💵</span><div><h3>Payroll Calculator (PH)</h3><p>SSS, PhilHealth, Pag-IBIG, and withholding tax → net pay.</p></div></div>
+        <div class="mock"><div class="mock-tag">Live preview</div>
+          <table class="mtable">
+            <tr><td>Basic Pay</td><td style="text-align:right;">₱25,000.00</td></tr>
+            <tr><td>SSS / PhilHealth / Pag-IBIG</td><td style="text-align:right;">−₱1,375.00</td></tr>
+            <tr><td>Withholding Tax</td><td style="text-align:right;">−₱833.00</td></tr>
+            <tr class="hl"><td>Net Pay</td><td style="text-align:right;">₱22,792.00</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="support-row">
+      <div class="mini-chip"><span class="micon">🧾</span><div><h4>VAT &amp; Withholding Tax (PH)</h4><div class="mres">₱100,000 sale → <b>₱12,000 VAT</b> computed instantly</div></div></div>
+      <div class="mini-chip"><span class="micon">🔤</span><div><h4>Amount in Words</h4><div class="mres">₱12,345.60 → <b>"Twelve Thousand...Pesos"</b></div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 8. HR & TRAINING -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="logo-mark">R3U TOOLBOX</div>
+    <div class="page-idx">08 / 16</div>
+    <div class="deptTag">🧮 HR / People &nbsp;+&nbsp; 🎓 Training</div>
+    <h2 style="margin-top:0;">From payroll prep to certificates, without the busywork</h2>
+    <div class="grid-cards cols-2">
+      <div class="tcard">
+        <div class="tcard-head"><span class="icon">⏱️</span><div><h3>Hours Converter</h3><p>Excel timesheet duration → decimal hours, duplicates auto-summed.</p></div></div>
+        <div class="mock" style="display:flex;gap:8px;"><div class="mock-tag">Live preview</div>
+          <div style="flex:1;">
+            <div style="font-size:8px;font-weight:800;color:var(--muted);margin-bottom:4px;text-transform:uppercase;">Before (punch export)</div>
+            <table class="mtable"><tr><th>Name</th><th>Hrs</th></tr>
+              <tr><td>Employee A</td><td>320:15</td></tr>
+              <tr><td>Employee A</td><td>375:15</td></tr>
+              <tr><td>Employee B</td><td>410:00</td></tr>
+            </table>
+          </div>
+          <div class="marrow" style="align-self:center;">→</div>
+          <div style="flex:1;">
+            <div style="font-size:8px;font-weight:800;color:var(--blue-500);margin-bottom:4px;text-transform:uppercase;">After (grouped)</div>
+            <table class="mtable"><tr><th>Name</th><th>Decimal</th></tr>
+              <tr class="hl"><td>Employee A</td><td>695.50</td></tr>
+              <tr><td>Employee B</td><td>410.00</td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="tcard">
+        <div class="tcard-head"><span class="icon">🏅</span><div><h3>Certificate Generator</h3><p>Paste a list of names → one printable certificate per person.</p></div></div>
+        <div class="mock"><div class="mock-tag">Live preview</div>
+          <div class="mstack">
+            <div class="mcert" style="left:0;top:8px;transform:rotate(-6deg);">🏅</div>
+            <div class="mcert" style="left:30px;top:2px;transform:rotate(2deg);">🏅</div>
+            <div class="mcert" style="left:60px;top:8px;transform:rotate(8deg);">🏅</div>
+          </div>
+          <div style="font-size:9.5px;font-weight:800;color:var(--blue-800);">40 names pasted → 40 certificates, one click</div>
+        </div>
+      </div>
+    </div>
+    <div class="support-row">
+      <div class="mini-chip"><span class="micon">🧮</span><div><h4>Leave &amp; 13th Month Calculator</h4><div class="mres">8 mos worked → <b>13th month pay</b> computed</div></div></div>
+      <div class="mini-chip"><span class="micon">📜</span><div><h4>Certificate of Employment</h4><div class="mres">Name + dates → <b>ready-to-sign COE</b> in &lt;1 min</div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 9. OPERATIONS -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="logo-mark">R3U TOOLBOX</div>
+    <div class="page-idx">09 / 16</div>
+    <div class="deptTag">📦 Warehouse &amp; Logistics &nbsp;+&nbsp; 🛒 Purchasing</div>
+    <h2 style="margin-top:0;">Stock and procurement, tracked without a spreadsheet mess</h2>
+    <div class="grid-cards cols-2">
+      <div class="tcard">
+        <div class="tcard-head"><span class="icon">⚖️</span><div><h3>Canvass Sheet Comparison</h3><p>Compare 3 supplier prices per item — lowest bid highlighted automatically.</p></div></div>
+        <div class="mock"><div class="mock-tag">Live preview</div>
+          <table class="mtable">
+            <tr><th>Item</th><th>Supplier A</th><th>Supplier B</th><th>Supplier C</th></tr>
+            <tr><td>Filter</td><td>₱850</td><td class="good">₱790 ✓</td><td>₱910</td></tr>
+          </table>
+          <div style="margin-top:6px;"><span class="mbadge good">🏆 Supplier B wins</span></div>
+        </div>
+      </div>
+      <div class="tcard">
+        <div class="tcard-head"><span class="icon">🔻</span><div><h3>Reorder Point Alert</h3><p>Upload the stock list — items below minimum are flagged instantly.</p></div></div>
+        <div class="mock"><div class="mock-tag">Live preview</div>
+          <table class="mtable">
+            <tr><th>Item</th><th>On Hand</th><th>Min</th><th>Status</th></tr>
+            <tr><td>Bearing 6205</td><td>14</td><td>10</td><td><span class="mbadge good">OK</span></td></tr>
+            <tr class="bad"><td>Oil Filter X2</td><td>3</td><td>10</td><td><span class="mbadge bad">Reorder</span></td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="support-row">
+      <div class="mini-chip"><span class="micon">📦</span><div><h4>Stock Card</h4><div class="mres">12 in, 5 out → <b>running balance: 47</b></div></div></div>
+      <div class="mini-chip"><span class="micon">📋</span><div><h4>PO Tracker</h4><div class="mres">PO-1042 marked <span class="flag good">Delivered</span></div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 10. FIELD & AFTERMARKET -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="logo-mark">R3U TOOLBOX</div>
+    <div class="page-idx">10 / 16</div>
+    <div class="deptTag">🔧 Customer Service &amp; Field &nbsp;+&nbsp; 💰 Aftermarket &amp; Parts</div>
+    <h2 style="margin-top:0;">Faster quotes, cleaner job cards, fewer disputes</h2>
+    <div class="grid-cards cols-2">
+      <div class="tcard">
+        <div class="tcard-head"><span class="icon">💰</span><div><h3>Quotation Generator</h3><p>Items and prices → formal printable quotation with VAT and grand total.</p></div></div>
+        <div class="mock"><div class="mock-tag">Live preview</div>
+          <table class="mtable">
+            <tr><td>2× Oil Filter</td><td style="text-align:right;">₱1,700</td></tr>
+            <tr><td>1× Service Labor</td><td style="text-align:right;">₱3,500</td></tr>
+            <tr><td>VAT (12%)</td><td style="text-align:right;">₱624</td></tr>
+            <tr class="hl"><td>Grand Total</td><td style="text-align:right;">₱5,824</td></tr>
+          </table>
+        </div>
+      </div>
+      <div class="tcard">
+        <div class="tcard-head"><span class="icon">🔧</span><div><h3>Service Report / Job Card</h3><p>Unit, ESN, findings, parts, plus customer e-signature.</p></div></div>
+        <div class="mock"><div class="mock-tag">Live preview</div>
+          <div class="mdoc" style="padding:0;">
+            <div class="mline w80"></div><div class="mline w60"></div><div class="mline w100"></div>
+            <div class="msign" style="color:#1f8a4c;">✍️ Customer signature captured</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="support-row">
+      <div class="mini-chip"><span class="micon">🔎</span><div><h4>ESN / Parts Quick Lookup</h4><div class="mres">Type ESN → <b>matching parts</b> instantly</div></div></div>
+      <div class="mini-chip"><span class="micon">🛡️</span><div><h4>Warranty Checker</h4><div class="mres">Commissioned 14 mos ago <span class="flag">Expired · 60d</span></div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 11. ADMIN / HSE / SECURITY -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="logo-mark">R3U TOOLBOX</div>
+    <div class="page-idx">11 / 16</div>
+    <div class="deptTag">📝 Admin &nbsp;+&nbsp; 🩺 HSE &amp; Clinic &nbsp;+&nbsp; 🛡️ Security</div>
+    <h2 style="margin-top:0;">Compliance and daily admin, always on record</h2>
+    <div class="grid-cards cols-2">
+      <div class="tcard">
+        <div class="tcard-head"><span class="icon">🩺</span><div><h3>Clinic Inventory (Excel)</h3><p>Load the clinic file — expiring, expired, and low-stock flagged at a glance.</p></div></div>
+        <div class="mock"><div class="mock-tag">Live preview</div>
+          <table class="mtable">
+            <tr><th>Item</th><th>Qty</th><th>Expiry</th></tr>
+            <tr class="good"><td>Paracetamol</td><td>120</td><td>Dec 2027</td></tr>
+            <tr class="bad"><td>Betadine 60ml</td><td>4</td><td><span class="mbadge bad">Expires in 20d</span></td></tr>
+          </table>
+        </div>
+      </div>
+      <div class="tcard">
+        <div class="tcard-head"><span class="icon">⚠️</span><div><h3>Incident Report Form</h3><p>Structured HSE form — printable report plus a running CSV log.</p></div></div>
+        <div class="mock"><div class="mock-tag">Live preview</div>
+          <div class="mdoc" style="padding:0;">
+            <div class="mline w80"></div><div class="mline w60"></div><div class="mline w100"></div>
+            <div class="msign" style="color:#1f8a4c;">✓ Logged to HSE register</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="support-row">
+      <div class="mini-chip"><span class="micon">📝</span><div><h4>Memo Generator</h4><div class="mres">Subject + body → <b>letterhead memo</b> in seconds</div></div></div>
+      <div class="mini-chip"><span class="micon">🛡️</span><div><h4>Visitor Gate Log</h4><div class="mres">Time-in/out → <b>exportable shift log</b></div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 12. EVENTS / IT / MANAGEMENT -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="logo-mark">R3U TOOLBOX</div>
+    <div class="page-idx">12 / 16</div>
+    <div class="deptTag">🎉 Events &nbsp;+&nbsp; 🔐 IT &nbsp;+&nbsp; 🗒️ Management</div>
+    <h2 style="margin-top:0;">From sportsfest scoring to leadership decisions</h2>
+    <div class="grid-cards cols-2">
+      <div class="tcard">
+        <div class="tcard-head"><span class="icon">🏆</span><div><h3>Sportsfest Scoreboard</h3><p>Live team standings with a random match bracket generator.</p></div></div>
+        <div class="mock"><div class="mock-tag">Live preview</div>
+          <div class="mbars">
+            <div class="mbarcol" style="height:100%;"><div class="mv">Team A · 84</div></div>
+            <div class="mbarcol" style="height:74%;"><div class="mv">Team B · 62</div></div>
+            <div class="mbarcol" style="height:52%;"><div class="mv">Team C · 44</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="tcard">
+        <div class="tcard-head"><span class="icon">🎯</span><div><h3>KPI Scorecard</h3><p>Target vs actual → attainment scorecard, color-coded.</p></div></div>
+        <div class="mock"><div class="mock-tag">Live preview</div>
+          <div style="font-size:9.5px;font-weight:800;color:var(--blue-800);margin-bottom:5px;">On-Time Delivery — 92% of target</div>
+          <div class="mgauge-bar"><div class="mgauge-fill" style="width:92%;"></div></div>
+          <div style="display:flex;justify-content:space-between;font-size:8.5px;color:var(--muted);margin-top:4px;font-weight:700;"><span>Target: 90%</span><span style="color:#1f8a4c;">Actual: 92% ✓</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="support-row">
+      <div class="mini-chip"><span class="micon" style="background:transparent;padding:0;"><span class="mqr" style="width:36px;height:36px;"></span></span><div><h4>Password &amp; QR Generator</h4><div class="mres">Strong password + <b>QR code</b> in one click</div></div></div>
+      <div class="mini-chip"><span class="micon">📌</span><div><h4>Decision Log</h4><div class="mres">Decision logged → <b>owner + date</b> on permanent record</div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 13. SECURITY & PRIVACY -->
+<section class="slide dark">
+  <div class="slide-inner">
+    <div class="logo-mark">R3U TOOLBOX</div>
+    <div class="page-idx">13 / 16</div>
+    <div class="kicker">Why This Is Safe To Approve</div>
+    <h2 style="color:#fff;">Nothing is uploaded. Ever.</h2>
+    <div class="compare">
+      <div class="box bad">
+        <h3>⚠️ Typical online tools</h3>
+        <ul>
+          <li>File is uploaded to a third-party server to process</li>
+          <li>No visibility into where payroll/HSE/quotation data goes</li>
+          <li>Often requires an account and stores data outside our control</li>
+        </ul>
+      </div>
+      <div class="box good">
+        <h3>✅ R3U Toolbox</h3>
+        <ul>
+          <li>Runs entirely inside the browser tab — there is no backend server</li>
+          <li>Files never leave the PC; nothing is ever transmitted</li>
+          <li>No accounts, no third-party servers — one link, full access</li>
+        </ul>
+      </div>
+    </div>
+    <div class="note-box">Any data a tool remembers (logs, favorites, saved lists) is stored only in that browser, on that device — never on a server.</div>
+  </div>
+</section>
+
+<!-- 14. ADOPTION PLAN -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="logo-mark">R3U TOOLBOX</div>
+    <div class="page-idx">14 / 16</div>
+    <div class="kicker">Adoption Plan</div>
+    <h2>A rollout that proves itself before it scales</h2>
+    <p class="lead">A staged introduction keeps risk low and lets each department confirm the tools fit their actual workflow.</p>
+    <div class="steps">
+      <div class="step"><div class="stepnum">1</div><h3>Pilot</h3><p>Run with IT and one or two departments already familiar with the tools (Accounting, HR).</p></div>
+      <div class="step-arrow">→</div>
+      <div class="step"><div class="stepnum">2</div><h3>Department walkthrough</h3><p>Short live demo for each department head, focused on their own tool set and examples.</p></div>
+      <div class="step-arrow">→</div>
+      <div class="step"><div class="stepnum">3</div><h3>Full rollout</h3><p>Link shared company-wide with a short how-to-start guide and the feedback channel open.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 15. ROADMAP -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="logo-mark">R3U TOOLBOX</div>
+    <div class="page-idx">15 / 16</div>
+    <div class="kicker">Roadmap</div>
+    <h2>57 tools live today — on the way to 100</h2>
+    <div class="twocol">
+      <div>
+        <ul class="checklist">
+          <li><span class="tick">✓</span><span><b>OCR</b> and <b>Org Chart Builder</b> shipped this batch — no longer "Soon."</span></li>
+          <li><span class="tick">✓</span><span>Flowchart Maker, Image Compressor, Unit &amp; Percentage Converters, Amount-in-Words added.</span></li>
+          <li><span class="tick">→</span><span>Next up: Kanban board, weekly planner, barcode generator, Gantt chart, more finance calculators.</span></li>
+          <li><span class="tick">→</span><span>Built and shipped in reviewed batches — nothing goes live untested.</span></li>
+        </ul>
+      </div>
+      <div class="grid-cards cols-1" style="margin-top:0;">
+        <div class="card"><span class="icon">🔜</span><h3>Still tagged "Soon"</h3><p>PDF → Word/Excel/PowerPoint (needs a small hosted converter service) · Protect/Unlock/Repair PDF (needs an added crypto library) · AI Assistant (planned as bring-your-own-key, so it stays private and fully under each department's control).</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 16. THE ASK -->
+<section class="slide dark">
+  <div class="slide-inner" style="text-align:center;display:flex;flex-direction:column;align-items:center;">
+    <div class="kicker">The Ask</div>
+    <h1 style="font-size:clamp(32px,5vw,54px);">Approve the company-wide rollout</h1>
+    <div class="grid-cards cols-3" style="margin-top:10px;text-align:left;">
+      <div class="card" style="background:rgba(255,255,255,.06);box-shadow:none;border:1px solid rgba(255,255,255,.15);">
+        <span class="icon">1️⃣</span><h3 style="color:#fff;">Approve the link</h3><p style="color:#cfe9ff;">Already live and published on GitHub Pages — nothing to install, nothing to procure.</p>
+      </div>
+      <div class="card" style="background:rgba(255,255,255,.06);box-shadow:none;border:1px solid rgba(255,255,255,.15);">
+        <span class="icon">2️⃣</span><h3 style="color:#fff;">Announce it</h3><p style="color:#cfe9ff;">Share the link at the next all-hands or department heads meeting.</p>
+      </div>
+      <div class="card" style="background:rgba(255,255,255,.06);box-shadow:none;border:1px solid rgba(255,255,255,.15);">
+        <span class="icon">3️⃣</span><h3 style="color:#fff;">Open one feedback channel</h3><p style="color:#cfe9ff;">A single inbox or chat so tools keep improving from real day-to-day use.</p>
+      </div>
+    </div>
+    <p class="lead" style="color:#cfe9ff;margin-top:34px;">Thank you — happy to walk through any tool live.</p>
+  </div>
+</section>
+
+</div>
+
+<div class="navbar">
+  <button id="prevBtn" title="Previous (←)">‹</button>
+  <div class="dots" id="dots"></div>
+  <button id="nextBtn" title="Next (→)">›</button>
+  <div class="counter" id="counter">1 / 16</div>
+</div>
+
+<script>
+const deck = document.getElementById('deck');
+const slides = Array.from(document.querySelectorAll('.slide'));
+const dotsWrap = document.getElementById('dots');
+const counter = document.getElementById('counter');
+let current = 0;
+
+slides.forEach((s,i)=>{
+  const d = document.createElement('div');
+  d.className = 'dot' + (i===0?' active':'');
+  d.addEventListener('click', ()=>goTo(i));
+  dotsWrap.appendChild(d);
+});
+const dots = Array.from(dotsWrap.children);
+
+function goTo(i){
+  i = Math.max(0, Math.min(slides.length-1, i));
+  slides[i].scrollIntoView({behavior:'smooth', inline:'start'});
+}
+function setActive(i){
+  current = i;
+  dots.forEach((d,idx)=>d.classList.toggle('active', idx===i));
+  counter.textContent = (i+1) + ' / ' + slides.length;
+}
+
+document.getElementById('prevBtn').addEventListener('click', ()=>goTo(current-1));
+document.getElementById('nextBtn').addEventListener('click', ()=>goTo(current+1));
+
+document.addEventListener('keydown', e=>{
+  if(e.key==='ArrowRight' || e.key==='PageDown') goTo(current+1);
+  if(e.key==='ArrowLeft' || e.key==='PageUp') goTo(current-1);
+  if(e.key==='Home') goTo(0);
+  if(e.key==='End') goTo(slides.length-1);
+  if(e.key==='f' || e.key==='F'){
+    if(!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{});
+    else document.exitFullscreen();
+  }
+});
+
+const io = new IntersectionObserver((entries)=>{
+  entries.forEach(en=>{
+    if(en.isIntersecting && en.intersectionRatio>0.6){
+      setActive(slides.indexOf(en.target));
+    }
+  });
+}, {root:deck, threshold:[0.6]});
+slides.forEach(s=>io.observe(s));
+
+// Bars — tools per department
+const deptData = [
+  ['Everyone',14],['Accounting',4],['Admin',2],['HSE/Clinic',3],
+  ['Cust. Service',3],['Security',1],['Events',2],['IT',3],
+  ['HR/People',6],['Aftermarket',4],['Warehouse',4],['Purchasing',3],
+  ['Finance',5],['Training',3],['Management',3]
+];
+const max = Math.max(...deptData.map(d=>d[1]));
+const barsEl = document.getElementById('bars');
+if(barsEl){
+  deptData.forEach(([name,val])=>{
+    const col = document.createElement('div');
+    col.className = 'bar-col';
+    const h = Math.max(10, (val/max)*140);
+    col.innerHTML = '<div class="bar-val">'+val+'</div><div class="bar" style="height:'+h+'px"></div><div class="bar-label">'+name+'</div>';
+    barsEl.appendChild(col);
+  });
+}
+</script>
+
+</body>
+</html>

@@ -45,6 +45,7 @@
   button:disabled{opacity:.4;cursor:not-allowed}
   button.go{background:#fff;border-color:#fff;color:var(--blue-800);font-weight:600}
   button.go:hover:not(:disabled){background:var(--blue-50)}
+  button.icon-btn{padding:6px 9px;font-size:15px;line-height:1;display:flex;align-items:center}
   main{flex:1;display:flex;min-height:0}
   aside{
     width:176px;flex-shrink:0;border-right:1px solid var(--line);
@@ -168,6 +169,7 @@
   <label class="opt" title="Write =VLOOKUP formulas in Supplier Name instead of the names read from the spool">
     <input type="checkbox" id="optVlookup"> VLOOKUP formulas
   </label>
+  <button id="fsBtn" class="icon-btn" title="Full screen" onclick="toggleFullscreen()">⛶</button>
   <button id="exAll" disabled>Export all</button>
   <button id="ex" class="go" disabled>Export .xlsx</button>
 </header>
@@ -583,6 +585,24 @@ document.addEventListener("drop",e=>{
   e.preventDefault(); $("drop").classList.remove("over");
   if(e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
 });
+
+function toggleFullscreen(){
+  const b=document.getElementById("fsBtn");
+  if(!document.fullscreenElement){
+    (document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen())||
+    (document.documentElement.webkitRequestFullscreen&&document.documentElement.webkitRequestFullscreen());
+    if(b)b.textContent="⊗";
+  }else{
+    (document.exitFullscreen&&document.exitFullscreen())||
+    (document.webkitExitFullscreen&&document.webkitExitFullscreen());
+    if(b)b.textContent="⛶";
+  }
+}
+document.addEventListener("fullscreenchange",()=>{
+  const b=document.getElementById("fsBtn");
+  if(b)b.textContent=document.fullscreenElement?"⊗":"⛶";
+});
+
 render();
 </script>
 </body>

@@ -226,6 +226,7 @@ footer{text-align:center;color:var(--muted);font-size:12.5px;padding:34px 20px 5
 .clin-table-wrap tr.soon td:first-child{border-left:4px solid var(--amber)}
 .rem-ok{color:var(--green);font-weight:800}.rem-lo{color:var(--red);font-weight:800}
 #sbFrame{width:100%;height:78vh;border:1px solid var(--border);border-radius:14px;background:#fff}
+#ctFrame{width:100%;height:78vh;border:1px solid var(--border);border-radius:14px;background:#fff}
 .match-ok{background:color-mix(in srgb,var(--green) 12%,transparent)}
 .match-no{background:color-mix(in srgb,var(--red) 10%,transparent)}
 .fn-out{font-family:Consolas,monospace;font-size:16px;font-weight:700;background:var(--card2);
@@ -368,6 +369,8 @@ const TOOLS=[
   desc:"Paste any list — removes duplicates, trims spaces, fixes casing. Instant cleanup."},
  {id:"spoolbox",dept:"Accounting AP/AR",icon:"🧵",name:"Spoolbox - Aging",full:true,
   desc:"APS516 AP-aging spool converter with full reconciliation checks — runs right here in this window."},
+ {id:"colltrack",dept:"Accounting AP/AR",icon:"📇",name:"Collection Tracker",full:true,
+  desc:"Browse your collection documents next to a live records table — log entries, edit, filter, and import/export your tracker. Runs right here in this window."},
  {id:"aging",dept:"Accounting AP/AR",icon:"⏳",name:"Invoice Aging Calculator",
   desc:"Paste invoices with dates & amounts — get 30/60/90+ day aging buckets instantly."},
  {id:"tax",dept:"Accounting AP/AR",icon:"🧾",name:"VAT & Withholding Tax (PH)",
@@ -679,6 +682,18 @@ spoolbox:()=>`
   ])}
   <iframe id="sbFrame" src="R3U_SpoolBox.html"></iframe>
   <div class="note">If the app doesn't load, make sure <b>R3U_SpoolBox.html</b> sits in the same folder as this index.html (same rule on GitHub).</div>`,
+
+/* ── COLLECTION TRACKER (embedded) ── */
+colltrack:()=>`
+  ${HOW([
+   'The full Collection Tracker runs below — no new tab needed.',
+   'Click <b>📁 Open folder</b> (top-right, inside the app) to browse your collection documents while you log entries — or skip straight to logging on the right, no folder required.',
+   'Use <b>⭳ Import existing tracker</b> to load an existing .xlsx — the table switches columns to match it automatically.',
+   'Log entries directly into the Records table: <b>＋ Column</b> adds a field, <b>⧉ Duplicate</b> copies a row, and the filter box searches as you type.',
+   'Everything is saved in this browser as you work — export back to Excel whenever you need a copy to send out.'
+  ])}
+  <iframe id="ctFrame" src="R3U_Collection_Tracker.html"></iframe>
+  <div class="note">If the app doesn't load, make sure <b>R3U_Collection_Tracker.html</b> sits in the same folder as this index.html (same rule on GitHub).</div>`,
 
 /* ── QUICK CHARTS ── */
 quickchart:()=>`

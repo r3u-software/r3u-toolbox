@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark" data-accent="aurora">
+<html lang="en" data-theme="light" data-accent="aurora">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -378,7 +378,7 @@ function applyTheme(t){document.documentElement.dataset.theme=t;localStorage.set
 function toggleTheme(){applyTheme(document.documentElement.dataset.theme==="dark"?"light":"dark");}
 function applyAccent(a){document.documentElement.dataset.accent=a;localStorage.setItem("r3u.accent",a);}
 function cycleAccent(){const c=document.documentElement.dataset.accent||"aurora";applyAccent(ACCENTS[(ACCENTS.indexOf(c)+1)%ACCENTS.length]);toast("Accent: "+document.documentElement.dataset.accent,"","ok");}
-function initTheme(){applyTheme(localStorage.getItem("r3u.theme")||"dark");applyAccent(localStorage.getItem("r3u.accent")||"aurora");}
+function initTheme(){applyTheme(localStorage.getItem("r3u.theme")||"light");applyAccent(localStorage.getItem("r3u.accent")||"aurora");}
 function toggleFullscreen(){const b=$("fsBtn");if(!document.fullscreenElement){document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen();if(b)b.textContent="⊗";}else{document.exitFullscreen&&document.exitFullscreen();if(b)b.textContent="⛶";}}
 document.addEventListener("fullscreenchange",()=>{const b=$("fsBtn");if(b)b.textContent=document.fullscreenElement?"⊗":"⛶";});
 

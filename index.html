@@ -227,6 +227,7 @@ footer{text-align:center;color:var(--muted);font-size:12.5px;padding:34px 20px 5
 .rem-ok{color:var(--green);font-weight:800}.rem-lo{color:var(--red);font-weight:800}
 #sbFrame{width:100%;height:78vh;border:1px solid var(--border);border-radius:14px;background:#fff}
 #ctFrame{width:100%;height:78vh;border:1px solid var(--border);border-radius:14px;background:#fff}
+#pdfFrame{width:100%;height:78vh;border:1px solid var(--border);border-radius:14px;background:#fff}
 .match-ok{background:color-mix(in srgb,var(--green) 12%,transparent)}
 .match-no{background:color-mix(in srgb,var(--red) 10%,transparent)}
 .fn-out{font-family:Consolas,monospace;font-size:16px;font-weight:700;background:var(--card2);
@@ -339,16 +340,12 @@ const HOW=(steps,sampleFn)=>`<details class="howto"><summary>📖 How to use thi
 /* ═══ REGISTRY ═══ */
 const DEPTS=["Everyone","Accounting AP/AR","Admin","HR / People","HSE & Clinic","Customer Service & Field","Aftermarket & Parts","Warehouse & Logistics","Purchasing","Finance & Payroll","Training","Security","Events","Management","IT"];
 const TOOLS=[
- {id:"pdftool",dept:"Everyone",icon:"📄",name:"PDF Toolkit",wide:true,
-  desc:"Merge · Split · Organize & Rotate · Compress · JPG↔PDF · Watermark & Page Numbers · Zip · Add Text & E-Sign. All offline."},
+ {id:"pdfadv",dept:"Everyone",icon:"📄",name:"PDF Advance",full:true,
+  desc:"Search PDFs by control number or content, then merge, split, organize, compress, watermark, e-sign, and read scanned text — all in one place. Runs right here in this window."},
  {id:"quickchart",dept:"Everyone",icon:"📈",name:"Quick Charts",wide:true,
   desc:"Paste data → instant pie, doughnut, bar, or line chart → download as PNG for reports and slides."},
  {id:"reportbuilder",dept:"Everyone",icon:"🧠",name:"Excel Report Builder (Smart Summary)",wide:true,
   desc:"Load an Excel/CSV — auto totals, averages, top items by category, chart, and a printable one-page report."},
- {id:"pdf2office",dept:"Everyone",icon:"📝",name:"PDF → Word / Excel / PowerPoint",soon:true,
-  desc:"True format conversion needs server-side processing — planned once we host a small converter service."},
- {id:"ocrpdf",dept:"Everyone",icon:"👁️",name:"OCR — Scanned PDF / Photo to Text",wide:true,
-  desc:"Read the text out of a scanned PDF or a photo of a document — copy-paste ready. Runs in your browser."},
  {id:"flowchart",dept:"Everyone",icon:"🔀",name:"Flowchart Maker",wide:true,
   desc:"Type simple arrows like A --> B and get a clean flowchart — download as PNG for documents and slides."},
  {id:"imgtool",dept:"Everyone",icon:"🖼️",name:"Image Compressor / Resizer",wide:true,
@@ -357,8 +354,6 @@ const TOOLS=[
   desc:"Length, weight, temperature, volume, area — instant conversion as you type."},
  {id:"pctcalc",dept:"Everyone",icon:"➗",name:"Percentage Calculator",
   desc:"X% of Y, what percent X is of Y, and percent increase or decrease — the three classics."},
- {id:"protectpdf",dept:"Everyone",icon:"🔒",name:"Protect / Unlock / Repair PDF",soon:true,
-  desc:"Password-encrypt, remove known passwords, and repair damaged PDFs — needs an extra crypto library, coming next."},
  {id:"aiassist",dept:"Everyone",icon:"🤖",name:"AI Assistant",soon:true,
   desc:"Summarize documents, draft replies, explain data — planned as bring-your-own-API-key so it stays private and free to host."},
  {id:"csv2xlsx",dept:"Everyone",icon:"📊",name:"TXT / CSV → Excel",
@@ -544,7 +539,19 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeModal(); });
 /* ═══════════════════════ VIEWS ═══════════════════════ */
 const VIEWS={
 
-/* ── PDF TOOLKIT ── */
+/* ── PDF ADVANCE (embedded) ── */
+pdfadv:()=>`
+  ${HOW([
+   'The full PDF Advance runs below — no new tab needed.',
+   'Click <b>📁 Open folder</b> or drop files to load a batch of PDFs — search by control number, filename, or content across all of them.',
+   'Tick the <b>OCR</b> checkbox on search to also find text inside scanned/image-only PDFs (downloads the OCR engine once, ~15 MB, then stays cached).',
+   'Pick a file and run any tool: Merge, Split, Organize, Compress, PDF → JPG, Watermark & page numbers, Zip, Add Text & E-Sign, or Read Text (OCR).',
+   'Everything runs in this window — files are never uploaded anywhere.'
+  ])}
+  <iframe id="pdfFrame" src="R3U_PDF_Toolbox.html" allow="fullscreen" allowfullscreen></iframe>
+  <div class="note">If the app doesn't load, make sure <b>R3U_PDF_Toolbox.html</b> sits in the same folder as this index.html (same rule on GitHub). Password-protect/unlock/repair and true Office format conversion are still marked Soon inside this tool.</div>`,
+
+/* ── PDF TOOLKIT (retired — superseded by PDF Advance above, kept inert) ── */
 pdftool:()=>`
   ${HOW([
    '<b>Merge:</b> choose 2+ PDF files, arrange order with ▲▼, click Merge & Download.',

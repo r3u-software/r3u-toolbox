@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light" data-accent="aurora">
+<html lang="en" data-theme="dark" data-accent="aurora">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -378,7 +378,7 @@ function applyTheme(t){document.documentElement.dataset.theme=t;localStorage.set
 function toggleTheme(){applyTheme(document.documentElement.dataset.theme==="dark"?"light":"dark");}
 function applyAccent(a){document.documentElement.dataset.accent=a;localStorage.setItem("r3u.accent",a);}
 function cycleAccent(){const c=document.documentElement.dataset.accent||"aurora";applyAccent(ACCENTS[(ACCENTS.indexOf(c)+1)%ACCENTS.length]);toast("Accent: "+document.documentElement.dataset.accent,"","ok");}
-function initTheme(){applyTheme(localStorage.getItem("r3u.theme")||"light");applyAccent(localStorage.getItem("r3u.accent")||"aurora");}
+function initTheme(){applyTheme(localStorage.getItem("r3u.theme")||"dark");applyAccent(localStorage.getItem("r3u.accent")||"aurora");}
 function toggleFullscreen(){const b=$("fsBtn");if(!document.fullscreenElement){document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen();if(b)b.textContent="⊗";}else{document.exitFullscreen&&document.exitFullscreen();if(b)b.textContent="⛶";}}
 document.addEventListener("fullscreenchange",()=>{const b=$("fsBtn");if(b)b.textContent=document.fullscreenElement?"⊗":"⛶";});
 
@@ -697,33 +697,49 @@ let PS={bytes:null,count:0,name:""};
 function mSplit(){
   const f=activeFile();
   shell("Split PDF","✂️",
-    HOW(["Extract pages — type ranges like <b>1-3,5,8</b>.","Or split every page into its own PDF (saved as a .zip)."])+
+    HOW(["<b>Extract pages (keep only listed):</b> keep just the pages you type (e.g. <b>1-3,5</b>) and drop the rest — one PDF.","Tick <b>Separate file per group</b> to save each comma group as its own PDF (e.g. <b>1-2,3-6</b> → two PDFs).","<b>Split every page:</b> saves every page as its own PDF.","Files save straight into your output folder (use the Zip tool if you want them zipped)."])+
     `<div class="note" id="psInfo">${f?`<span class="ok-note">📕 ${esc(f.name)} — ${f.pages} pages</span>`:"Select a PDF from the list first."}</div>
      <div class="row"><div><label class="fld">Mode</label>
-       <select id="psMode"><option value="range">Extract pages (keep only listed)</option><option value="all">Split every page (zip)</option></select></div>
-       <div><label class="fld">Pages</label><input class="inp" id="psRange" placeholder="1-3,5"/></div></div>
+       <select id="psMode" onchange="psModeChange()"><option value="range">Extract pages (keep only listed)</option><option value="all">Split every page (one PDF each)</option></select></div>
+       <div id="psPagesWrap"><label class="fld">Pages</label><input class="inp" id="psRange" placeholder="1-3,5"/></div></div>
+     <div class="sig-cbs" id="psGroupWrap"><label><input type="checkbox" id="psPerGroup"> Separate file per group</label><span class="muted" style="font-size:11px">each comma group → its own PDF</span></div>
      <div style="margin-top:16px"><button class="btn primary" onclick="psRun()">✂️ Split &amp; Save</button></div>`);
   if(f)psSet(f.file);
 }
+function psModeChange(){const range=$("psMode").value==="range";
+  $("psPagesWrap").style.display=range?"block":"none";
+  $("psGroupWrap").style.display=range?"flex":"none";}
 async function psSet(file){PS.bytes=await file.arrayBuffer();PS.name=file.name.replace(/\.pdf$/i,"");
   const doc=await PDFLib.PDFDocument.load(PS.bytes,{ignoreEncryption:true});PS.count=doc.getPageCount();
   $("psInfo").innerHTML=`<span class="ok-note">📕 ${esc(file.name)} — ${PS.count} pages</span>`;}
-function psParseRanges(s,max){const out=[];s.split(",").forEach(p=>{p=p.trim();if(!p)return;
-  const m=p.match(/^(\d+)\s*-\s*(\d+)$/);if(m){for(let i=+m[1];i<=+m[2];i++)if(i>=1&&i<=max)out.push(i-1);}
-  else{const n=parseInt(p);if(n>=1&&n<=max)out.push(n-1);}});return out;}
+function parseSeg(seg,max){const out=[];seg=(seg||"").trim();const m=seg.match(/^(\d+)\s*-\s*(\d+)$/);
+  if(m){let a=+m[1],b=+m[2];if(a>b)[a,b]=[b,a];for(let i=a;i<=b;i++)if(i>=1&&i<=max)out.push(i-1);}
+  else{const n=parseInt(seg);if(n>=1&&n<=max)out.push(n-1);}return out;}
 async function psRun(){
   if(!PS.bytes){toast("Select a PDF first","","warn");return;}
+  const mode=$("psMode").value;
   loading(true,"Splitting…");
-  try{const mode=$("psMode").value;const src=await PDFLib.PDFDocument.load(PS.bytes,{ignoreEncryption:true});
-    if(mode==="range"){const idx=psParseRanges($("psRange").value,PS.count);
-      if(!idx.length){toast("Enter valid pages","e.g. 1-3,5","warn");loading(false);return;}
-      const out=await PDFLib.PDFDocument.create();(await out.copyPages(src,idx)).forEach(p=>out.addPage(p));
-      await saveOut(await out.save(),PS.name+"_extract.pdf","application/pdf");
-    }else{const zip=new JSZip();progress(0,PS.count);
+  try{const src=await PDFLib.PDFDocument.load(PS.bytes,{ignoreEncryption:true});
+    if(mode==="all"){                                   // every page → its own PDF
+      progress(0,PS.count);
       for(let i=0;i<PS.count;i++){const out=await PDFLib.PDFDocument.create();(await out.copyPages(src,[i])).forEach(p=>out.addPage(p));
-        zip.file(PS.name+"_page"+(i+1)+".pdf",await out.save());progress(i+1,PS.count);}
-      loading(true,"Zipping…");const blob=await zip.generateAsync({type:"blob"},m=>progress(m.percent,100));
-      await saveOut(blob,PS.name+"_pages.zip","application/zip");}
+        await saveOut(await out.save(),PS.name+"_page"+(i+1)+".pdf","application/pdf");progress(i+1,PS.count);}
+    }else{
+      const groups=$("psRange").value.split(",").map(s=>s.trim()).filter(Boolean);
+      if(!groups.length){toast("Enter pages","e.g. 1-3,5","warn");loading(false);return;}
+      if($("psPerGroup")&&$("psPerGroup").checked){       // each comma group → its own PDF
+        progress(0,groups.length);let n=0;
+        for(const g of groups){const idx=parseSeg(g,PS.count);if(!idx.length)continue;
+          const out=await PDFLib.PDFDocument.create();(await out.copyPages(src,idx)).forEach(p=>out.addPage(p));
+          await saveOut(await out.save(),PS.name+"_"+g.replace(/\s+/g,"")+".pdf","application/pdf");n++;progress(n,groups.length);}
+        if(!n){toast("No valid pages","e.g. 1-2,3-6","warn");loading(false);return;}
+      }else{                                              // one PDF with all listed pages
+        const idx=groups.flatMap(g=>parseSeg(g,PS.count));
+        if(!idx.length){toast("Enter valid pages","e.g. 1-3,5","warn");loading(false);return;}
+        const out=await PDFLib.PDFDocument.create();(await out.copyPages(src,idx)).forEach(p=>out.addPage(p));
+        await saveOut(await out.save(),PS.name+"_extract.pdf","application/pdf");
+      }
+    }
     closeModal();
   }catch(e){toast("Split failed",String(e.message||e),"err");}finally{loading(false);}
 }

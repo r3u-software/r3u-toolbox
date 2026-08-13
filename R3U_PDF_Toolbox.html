@@ -336,7 +336,7 @@ const nospace=s=>String(s||"").replace(/\s+/g,"");
    "R3U_PDF_Toolbox_Output" subfolder and write every export there with no
    further dialogs. Without it (or on Firefox/Safari) exports fall back to
    the normal Downloads folder. The chosen folder persists across sessions. */
-const OUT_SUB="R3U_PDF_Toolbox_Output";
+/* Output folder is whatever the user picks; files save directly into it. */
 function idbSet(k,v){return new Promise((res,rej)=>{const o=indexedDB.open("r3u_pdfbox",1);
   o.onupgradeneeded=()=>o.result.createObjectStore("kv");
   o.onsuccess=()=>{const tx=o.result.transaction("kv","readwrite");tx.objectStore("kv").put(v,k);tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);};
@@ -348,10 +348,10 @@ function idbGet(k){return new Promise(res=>{const o=indexedDB.open("r3u_pdfbox",
 async function chooseOutput(){
   if(!window.showDirectoryPicker){toast("Auto-save not supported","This browser can't save to a folder — exports go to Downloads. Use Chrome or Edge for folder output.","warn");return;}
   try{
-    const base=await window.showDirectoryPicker({id:"r3uPdfOut",mode:"readwrite",startIn:"desktop"});
-    S.outDir=await base.getDirectoryHandle(OUT_SUB,{create:true});
+    S.outDir=await window.showDirectoryPicker({id:"r3uPdfOut",mode:"readwrite",startIn:"downloads"});
     try{await idbSet("outDir",S.outDir);}catch(e){}
-    updateOutBadge();toast("Output folder set","Every export saves into “"+OUT_SUB+"”.","ok");
+    updateOutBadge();toast("Output folder set","Exports now save to “"+S.outDir.name+"”.","ok");
+    if(S.railMode==="output")loadOutList();
   }catch(e){if(e.name!=="AbortError")toast("Couldn't set folder",String(e.message||e),"err");}
 }
 async function restoreOut(){try{const d=await idbGet("outDir");if(d){S.outDir=d;updateOutBadge();}}catch(e){}}
@@ -366,10 +366,11 @@ async function saveOut(bytes,name,type){
   if(S.outDir&&await ensurePerm(S.outDir)){
     try{const nm=await uniqueName(S.outDir,name);const fh=await S.outDir.getFileHandle(nm,{create:true});
       const w=await fh.createWritable();await w.write(new Blob([bytes],{type}));await w.close();
-      toast("Saved to output folder",OUT_SUB+" / "+nm,"ok");return;}
+      toast("Saved to output folder",(S.outDir.name||"output")+" / "+nm,"ok");return;}
     catch(e){toast("Folder save failed — downloading",String(e.message||e),"warn");}
   }
-  dlBlob(bytes,name,type);
+  dlBlob(bytes,name,type);   /* clean name to the browser's Downloads folder */
+  toast("Saved to Downloads",name,"ok");
 }
 
 /* ══ THEME / FULLSCREEN ══ */
@@ -509,7 +510,7 @@ async function ocrFindInFile(f,q){
 /* output-folder browser (switch the file rail to what's been saved) */
 async function loadOutList(){
   const box=$("frList");
-  if(!S.outDir){box.innerHTML=`<div class="vb-empty" style="height:auto;padding:40px 16px"><div class="ei">💾</div><h3 style="font-size:14px">No output folder</h3><p>Click <b>💾</b> in the top bar to choose where exports save, then browse them here to email the final file.</p></div>`;$("railCount").textContent="0";return;}
+  if(!S.outDir){box.innerHTML=`<div class="vb-empty" style="height:auto;padding:40px 16px"><div class="ei">💾</div><h3 style="font-size:14px">Saving to Downloads</h3><p>Exports go to your <b>Downloads</b> folder. To save into a folder of your choice — and browse, rename &amp; email files here — click <b>📂 Choose output folder</b> — writes are silent, no per-file dialogs.</p></div>`;$("railCount").textContent="0";return;}
   if(!await ensurePerm(S.outDir)){box.innerHTML=`<p class="muted" style="padding:24px;text-align:center;font-size:12.5px">Permission needed — click 💾 again.</p>`;return;}
   box.innerHTML=`<p class="muted" style="padding:20px;text-align:center;font-size:12px">Reading output folder…</p>`;
   const out=[];
@@ -536,8 +537,12 @@ function renderOutRail(){
 }
 function toggleOutCheck(i){S.outChecked.has(i)?S.outChecked.delete(i):S.outChecked.add(i);renderOutRail();refreshTools();}
 async function copyToOutput(i){
-  if(!S.outDir){toast("No output folder","Open the Output tab and choose a folder first.","warn");return;}
-  const f=S.files[i];loading(true,"Copying to output…");
+  const f=S.files[i];
+  if(!S.outDir){                                   /* ask where to save the first time */
+    if(!window.showDirectoryPicker){toast("Not supported","Use Chrome/Edge to copy into a folder.","warn");return;}
+    await chooseOutput();if(!S.outDir)return;       /* cancelled → do nothing */
+  }
+  loading(true,"Saving to output…");
   try{await saveOut(await f.file.arrayBuffer(),f.name,"application/pdf");}
   catch(e){toast("Copy failed",String(e.message||e),"err");}finally{loading(false);}
 }
@@ -1126,7 +1131,7 @@ async function emRun(){
 }
 
 /* ══ BOOT ══ */
-function boot(){initTheme();setupWorker();renderTools();renderRail();showEmpty();restoreOut();}
+function boot(){initTheme();setupWorker();renderTools();renderRail();showEmpty();}   /* no auto-restored folder → default is silent browser downloads */
 window.addEventListener("DOMContentLoaded",()=>{(window.PDFLib&&window.pdfjsLib)?boot():window.addEventListener("load",boot,{once:true});});
 </script>
 <script>
